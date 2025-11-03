@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'config/theme.dart';
 import 'config/api_config.dart';
 import 'screens/auth/login_screen.dart';
-import 'screens/home/home_screen.dart';
+import 'screens/main/main_screen.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
       home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomeScreen(),
+        '/home': (context) => const MainScreen(),
       },
     );
   }
@@ -62,6 +62,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return _isLoggedIn ? const HomeScreen() : const LoginScreen();
+    return _isLoggedIn ? const MainScreen() : const LoginScreen();
   }
 }
