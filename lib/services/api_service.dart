@@ -7,6 +7,7 @@ import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/department.dart';
 import '../models/appointment.dart';
+import '../models/medical_record.dart';
 
 class ApiService {
   // Base URL from config
@@ -572,6 +573,129 @@ class ApiService {
             throw Exception(message);
           } catch (e) {
             throw Exception('فشل تحميل المواعيد (${response.statusCode})');
+          }
+        }
+      } on SocketException {
+        throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على ${baseUrl}');
+      } on HttpException {
+        throw Exception('خطأ في الاتصال بالخادم');
+      } catch (e) {
+        if (e.toString().contains('غير مصرح') || e.toString().contains('انتهت صلاحية')) {
+          rethrow;
+        }
+        if (e.toString().contains('timeout')) {
+          throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+        }
+        // Re-throw if it's already an Exception with a message
+        if (e is Exception) {
+          rethrow;
+        }
+        throw Exception('خطأ غير متوقع: ${e.toString()}');
+      }
+    } catch (e) {
+      // Re-throw if it's already an Exception with a message
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('خطأ غير متوقع: ${e.toString()}');
+    }
+  }
+
+  // Get patient medical records with optional pagination
+  Future<PaginatedMedicalRecords> getPatientMedicalRecords({
+    int page = 1,
+    int limit = 100,
+    String? token,
+  }) async {
+    try {
+      if (token == null || token.isEmpty) {
+        throw Exception('غير مصرح - يرجى تسجيل الدخول');
+      }
+      
+      // Build query parameters map
+      final Map<String, String> queryParams = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+      
+      // Build URI with query parameters
+      final baseUri = Uri.parse(baseUrl);
+      final path = '/patient/records';
+      
+      final uri = Uri(
+        scheme: baseUri.scheme,
+        host: baseUri.host,
+        port: baseUri.port,
+        path: '${baseUri.path}$path',
+        queryParameters: queryParams,
+      );
+      
+      // Make the request directly
+      final defaultHeaders = {
+        ...ApiConfig.defaultHeaders,
+        'Authorization': 'Bearer $token',
+      };
+      
+      try {
+        print('🌐 API Request: GET $uri');
+        print('🔐 With Authorization header');
+        
+        final response = await http.get(uri, headers: defaultHeaders).timeout(
+          Duration(seconds: ApiConfig.requestTimeout),
+          onTimeout: () {
+            throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+          },
+        );
+        
+        print('📥 Response Status: ${response.statusCode}');
+        
+        // Handle 401 Unauthorized
+        if (response.statusCode == 401) {
+          throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
+        }
+        
+        print('📥 Response Body: ${response.body}');
+        
+        // Process response
+        if (response.statusCode == 200) {
+          try {
+            final jsonData = jsonDecode(response.body);
+            
+            // Handle different response formats
+            Map<String, dynamic> paginatedData;
+            
+            if (jsonData['records'] != null) {
+              paginatedData = jsonData;
+            } else if (jsonData['data'] != null && jsonData['data'] is Map) {
+              paginatedData = jsonData['data'];
+            } else if (jsonData is List) {
+              // If response is a direct list, wrap it
+              return PaginatedMedicalRecords(
+                records: jsonData
+                    .map((item) => MedicalRecord.fromJson(item))
+                    .toList(),
+                total: jsonData.length,
+                page: page,
+                limit: limit,
+                totalPages: 1,
+              );
+            } else {
+              paginatedData = jsonData;
+            }
+            
+            return PaginatedMedicalRecords.fromJson(paginatedData);
+          } catch (e) {
+            print('❌ Error parsing medical records response: $e');
+            print('Response body: ${response.body}');
+            throw Exception('خطأ في معالجة استجابة الخادم');
+          }
+        } else {
+          try {
+            final error = jsonDecode(response.body);
+            final message = error['message'] ?? 'فشل تحميل السجلات الطبية';
+            throw Exception(message);
+          } catch (e) {
+            throw Exception('فشل تحميل السجلات الطبية (${response.statusCode})');
           }
         }
       } on SocketException {

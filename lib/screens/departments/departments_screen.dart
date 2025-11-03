@@ -16,14 +16,27 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
   final TextEditingController _searchController = TextEditingController();
   final _apiService = ApiService();
   String _searchQuery = '';
-  
-  late final Future<List<Department>> _departmentsFuture = 
-    _apiService.getPublicDepartments();
+
+  late Future<List<Department>> _departmentsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _departmentsFuture = _apiService.getPublicDepartments();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshDepartments() async {
+    setState(() {
+      _departmentsFuture = _apiService.getPublicDepartments();
+    });
+    // انتظار اكتمال الجلب
+    await _departmentsFuture;
   }
 
   @override
@@ -173,7 +186,7 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                         ),
                       );
                     }
-                    
+
                     if (snapshot.hasError) {
                       return Center(
                         child: Padding(
@@ -211,9 +224,7 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                               ),
                               const SizedBox(height: 24),
                               ElevatedButton.icon(
-                                onPressed: () {
-                                  setState(() {});
-                                },
+                                onPressed: _refreshDepartments,
                                 icon: const Icon(Iconsax.refresh),
                                 label: const Text('إعادة المحاولة'),
                                 style: ElevatedButton.styleFrom(
@@ -228,7 +239,7 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                         ),
                       );
                     }
-                    
+
                     if (!snapshot.hasData || snapshot.data!.isEmpty) {
                       return Center(
                         child: Padding(
@@ -269,17 +280,23 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                         ),
                       );
                     }
-                    
+
                     final allDepartments = snapshot.data!;
                     final filteredDepartments = _searchQuery.isEmpty
                         ? allDepartments
-                        : allDepartments.where((dept) =>
-                            dept.name.toLowerCase().contains(
-                              _searchQuery.toLowerCase(),
-                            ) || (dept.description?.toLowerCase().contains(
-                              _searchQuery.toLowerCase(),
-                            ) ?? false)).toList();
-                    
+                        : allDepartments
+                              .where(
+                                (dept) =>
+                                    dept.name.toLowerCase().contains(
+                                      _searchQuery.toLowerCase(),
+                                    ) ||
+                                    (dept.description?.toLowerCase().contains(
+                                          _searchQuery.toLowerCase(),
+                                        ) ??
+                                        false),
+                              )
+                              .toList();
+
                     return filteredDepartments.isEmpty
                         ? _buildSearchResults()
                         : _buildDepartmentsList(filteredDepartments);
@@ -295,14 +312,12 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
 
   Widget _buildDepartmentsList(List<Department> departments) {
     return RefreshIndicator(
-      onRefresh: () async {
-        setState(() {});
-      },
+      onRefresh: _refreshDepartments,
       child: GridView.builder(
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.85,
+          childAspectRatio: 0.75,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
@@ -358,14 +373,11 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
 
   Widget _buildDepartmentCard(Department department, int index) {
     final color = _getDepartmentColor(index);
-    final gradientColors = _getDepartmentGradient(index);
-    
+
     return Card(
       elevation: 3,
       shadowColor: color.withOpacity(0.2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
         onTap: () {
           _showDepartmentDetails(department);
@@ -377,10 +389,7 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Colors.white,
-                color.withOpacity(0.05),
-              ],
+              colors: [Colors.white, color.withOpacity(0.01)],
             ),
           ),
           child: Column(
@@ -388,50 +397,24 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
             children: [
               // Header with gradient
               Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: gradientColors,
-                  ),
-                  borderRadius: const BorderRadius.only(
+                height: 120,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    // Background pattern
-                    Positioned(
-                      top: -20,
-                      right: -20,
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -15,
-                      left: -15,
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                    ),
-                    // Logo/Icon
-                    Center(
-                      child: _buildDepartmentLogo(department, color),
-                    ),
-                  ],
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                  child: _buildDepartmentLogo(
+                    department,
+                    color,
+                    fullWidth: true,
+                  ),
                 ),
               ),
               // Content
@@ -488,11 +471,7 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Icon(
-                              Iconsax.arrow_left_2,
-                              color: color,
-                              size: 12,
-                            ),
+                            Icon(Iconsax.arrow_left_2, color: color, size: 12),
                           ],
                         ),
                       ),
@@ -507,9 +486,100 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
     );
   }
 
-  Widget _buildDepartmentLogo(Department department, Color fallbackColor) {
+  Widget _buildDepartmentLogo(
+    Department department,
+    Color fallbackColor, {
+    bool fullWidth = false,
+  }) {
     // If logo URL is available, show it
     if (department.logoUrl != null && department.logoUrl!.isNotEmpty) {
+      if (fullWidth) {
+        // عرض الصورة لتملأ الكونتينر بالكامل
+        return Image.network(
+          department.logoUrl!,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: Colors.white,
+              child: Center(
+                child: SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                        : null,
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(fallbackColor),
+                  ),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.white,
+              child: Center(
+                child: _buildFallbackIcon(department, fallbackColor),
+              ),
+            );
+          },
+        );
+      } else {
+        // العرض القديم (دائري) للاستخدام في Bottom Sheet
+        return Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipOval(
+            child: Image.network(
+              department.logoUrl!,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: SizedBox(
+                    width: 30,
+                    height: 30,
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                          : null,
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(fallbackColor),
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return _buildFallbackIcon(department, fallbackColor);
+              },
+            ),
+          ),
+        );
+      }
+    }
+
+    // Otherwise, show icon
+    if (fullWidth) {
+      return Container(
+        color: Colors.white,
+        child: Center(child: _buildFallbackIcon(department, fallbackColor)),
+      );
+    } else {
       return Container(
         width: 70,
         height: 70,
@@ -524,52 +594,9 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
             ),
           ],
         ),
-        child: ClipOval(
-          child: Image.network(
-            department.logoUrl!,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Center(
-                child: SizedBox(
-                  width: 30,
-                  height: 30,
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(fallbackColor),
-                  ),
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              return _buildFallbackIcon(department, fallbackColor);
-            },
-          ),
-        ),
+        child: _buildFallbackIcon(department, fallbackColor),
       );
     }
-    
-    // Otherwise, show icon
-    return Container(
-      width: 70,
-      height: 70,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: _buildFallbackIcon(department, fallbackColor),
-    );
   }
 
   Widget _buildFallbackIcon(Department department, Color color) {
@@ -583,18 +610,14 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
       'brain': Iconsax.profile_2user,
       'bone': Iconsax.activity,
     };
-    
+
     final icon = department.icon != null && iconMap.containsKey(department.icon)
         ? iconMap[department.icon]!
         : Iconsax.hospital;
-    
-    return Icon(
-      icon,
-      color: color,
-      size: 35,
-    );
+
+    return Icon(icon, color: color, size: 35);
   }
-  
+
   Color _getDepartmentColor(int index) {
     final colors = [
       AppColors.primary,
@@ -607,20 +630,6 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
       const Color(0xFF00BCD4), // Cyan
     ];
     return colors[index % colors.length];
-  }
-
-  List<Color> _getDepartmentGradient(int index) {
-    final gradients = [
-      AppColors.gradientPrimary,
-      [const Color(0xFFF18F01), const Color(0xFFFF6B6B)],
-      AppColors.gradientSecondary,
-      AppColors.gradientSuccess,
-      [const Color(0xFF2196F3), const Color(0xFF00BCD4)],
-      [const Color(0xFF9C27B0), const Color(0xFFE91E63)],
-      [const Color(0xFFFF5722), const Color(0xFFFFC107)],
-      [const Color(0xFF00BCD4), const Color(0xFF4CAF50)],
-    ];
-    return gradients[index % gradients.length];
   }
 
   void _showDepartmentDetails(Department department) {
@@ -724,7 +733,9 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('عرض الأطباء - سيتم تطوير هذه الميزة قريباً'),
+                                content: Text(
+                                  'عرض الأطباء - سيتم تطوير هذه الميزة قريباً',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
@@ -747,7 +758,9 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('حجز موعد - سيتم تطوير هذه الميزة قريباً'),
+                                content: Text(
+                                  'حجز موعد - سيتم تطوير هذه الميزة قريباً',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
@@ -775,4 +788,3 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
     );
   }
 }
-
