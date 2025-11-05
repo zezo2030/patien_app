@@ -14,16 +14,10 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  int _appointmentsReloadKey = 0;
   final Map<String, int> _badges = {
     'المواعيد': 2, // Example badge count
   };
-
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const DepartmentsScreen(),
-    const AppointmentsScreen(),
-    const ProfileScreen(),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -33,13 +27,21 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Colors.white,
         body: IndexedStack(
           index: _currentIndex,
-          children: _screens,
+          children: [
+            const HomeScreen(),
+            const DepartmentsScreen(),
+            AppointmentsScreen(key: ValueKey(_appointmentsReloadKey)),
+            const ProfileScreen(),
+          ],
         ),
         bottomNavigationBar: BottomNavBar(
           currentIndex: _currentIndex,
           onTap: (index) {
             setState(() {
               _currentIndex = index;
+              if (index == 2) {
+                _appointmentsReloadKey++;
+              }
             });
           },
           badges: _badges,

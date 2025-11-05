@@ -5,6 +5,7 @@ import '../../config/text_styles.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/appointment.dart';
+import 'appointment_details_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -18,20 +19,38 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
   late TabController _tabController;
   final _apiService = ApiService();
   final _authService = AuthService();
+  final Map<String, String> _doctorNameCache = {};
   
   int _currentTabIndex = 0;
+  bool _isLoading = false;
+  Future<PaginatedAppointments>? _appointmentsFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
+      if (!_tabController.indexIsChanging && mounted) {
         setState(() {
           _currentTabIndex = _tabController.index;
         });
       }
     });
+    _appointmentsFuture = _fetchAppointments();
+  }
+  Future<String?> _getDoctorName(String doctorId) async {
+    if (doctorId.isEmpty) return null;
+    if (_doctorNameCache.containsKey(doctorId)) return _doctorNameCache[doctorId];
+    try {
+      final token = await _authService.getToken();
+      if (token == null) return null;
+      final doctor = await _apiService.getDoctorById(doctorId: doctorId, token: token);
+      final name = doctor.name;
+      _doctorNameCache[doctorId] = name;
+      return name;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -62,6 +81,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
     return '$hour:$minute $period';
   }
 
+  String _formatDate(DateTime dateTime) {
+    final day = dateTime.day;
+    final month = _getArabicMonth(dateTime.month);
+    final year = dateTime.year;
+    final weekday = _getArabicWeekday(dateTime.weekday);
+    return '$weekday، $day $month $year';
+  }
+
   Future<PaginatedAppointments> _fetchAppointments({String? status}) async {
     final token = await _authService.getToken();
     if (token == null) {
@@ -86,7 +113,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
         return allAppointments.where((appointment) {
           final isUpcoming = appointment.startAt.isAfter(now);
           return (appointment.status == 'CONFIRMED' || 
-                  appointment.status == 'PENDING') && 
+                  appointment.status == 'PENDING' ||
+                  appointment.status == 'PENDING_CONFIRM') && 
                  isUpcoming;
         }).toList();
       case 1: // السابقة
@@ -184,9 +212,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
           body: TabBarView(
             controller: _tabController,
             children: [
-              _buildAppointmentsList(),
-              _buildAppointmentsList(),
-              _buildAppointmentsList(),
+              _buildAppointmentsList(0),
+              _buildAppointmentsList(1),
+              _buildAppointmentsList(2),
             ],
           ),
         ),
@@ -194,11 +222,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
     );
   }
 
-  Widget _buildAppointmentsList() {
+  Widget _buildAppointmentsList(int tabIndex) {
     return FutureBuilder<PaginatedAppointments>(
-      future: _fetchAppointments(),
+      future: _appointmentsFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting || _isLoading) {
           return const Center(
             child: CircularProgressIndicator(),
           );
@@ -232,7 +260,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    setState(() {});
+                    if (mounted) {
+                      setState(() {
+                        _appointmentsFuture = _fetchAppointments();
+                      });
+                    }
                   },
                   child: const Text('إعادة المحاولة'),
                 ),
@@ -247,7 +279,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
 
         final filteredAppointments = _filterAppointments(
           snapshot.data!.appointments,
-          _currentTabIndex,
+          tabIndex,
         );
 
         if (filteredAppointments.isEmpty) {
@@ -256,12 +288,16 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
             'لا توجد مواعيد سابقة',
             'لا توجد مواعيد ملغاة',
           ];
-          return _buildEmptyState(messages[_currentTabIndex]);
+          return _buildEmptyState(messages[tabIndex]);
         }
 
         return RefreshIndicator(
           onRefresh: () async {
-            setState(() {});
+            if (mounted) {
+              setState(() {
+                _appointmentsFuture = _fetchAppointments();
+              });
+            }
           },
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -369,7 +405,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
     final time = _formatTime(appointment.startAt);
     
     // Get doctor name
-    final doctorName = appointment.doctor?.name ?? 'طبيب غير محدد';
+    final knownDoctorName = appointment.doctor?.name;
     
     // Get service/department name
     final serviceName = appointment.service?.name ?? 'خدمة غير محددة';
@@ -381,7 +417,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
     
     if (difference.isNegative && status != 'COMPLETED' && status != 'CANCELLED') {
       timeUntil = 'منتهي';
-    } else if (status == 'CONFIRMED' || status == 'PENDING') {
+    } else if (status == 'CONFIRMED' || status == 'PENDING' || status == 'PENDING_CONFIRM') {
       if (difference.inDays > 0) {
         timeUntil = 'بعد ${difference.inDays} يوم';
       } else if (difference.inHours > 0) {
@@ -393,7 +429,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
       }
     }
 
-    final canCancel = (status == 'CONFIRMED' || status == 'PENDING') && 
+    final canCancel = (status == 'CONFIRMED' || status == 'PENDING' || status == 'PENDING_CONFIRM') && 
                       difference.inHours > 2;
 
     return Card(
@@ -448,7 +484,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                     ),
                     child: Center(
                       child: Text(
-                        doctorName.isNotEmpty ? doctorName[0].toUpperCase() : 'د',
+                        (knownDoctorName != null && knownDoctorName.isNotEmpty)
+                            ? knownDoctorName[0].toUpperCase()
+                            : 'د',
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -463,13 +501,28 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'د. $doctorName',
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17,
+                        if (knownDoctorName != null && knownDoctorName.isNotEmpty)
+                          Text(
+                            'د. $knownDoctorName',
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                            ),
+                          )
+                        else
+                          FutureBuilder<String?>(
+                            future: _getDoctorName(appointment.doctorId),
+                            builder: (context, snapshot) {
+                              final name = snapshot.data;
+                              return Text(
+                                'د. ${name != null && name.isNotEmpty ? name : 'طبيب غير محدد'}',
+                                style: AppTextStyles.bodyLarge.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                ),
+                              );
+                            },
                           ),
-                        ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
@@ -743,37 +796,81 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
   }
 
   void _showAppointmentDetails(Appointment appointment) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تفاصيل الموعد - سيتم تطوير هذه الصفحة قريباً'),
-        behavior: SnackBarBehavior.floating,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AppointmentDetailsScreen(appointment: appointment),
       ),
-    );
+    ).then((result) {
+      // إعادة تحميل البيانات إذا تم إجراء تغيير
+      if (result == true && mounted) {
+        setState(() {});
+      }
+    });
   }
 
-  void _cancelAppointment(Appointment appointment) {
-    showDialog(
+  void _cancelAppointment(Appointment appointment) async {
+    // التحقق من الحالة
+    if (appointment.status != 'PENDING_CONFIRM' && 
+        appointment.status != 'CONFIRMED' &&
+        appointment.status != 'PENDING') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا يمكن إلغاء موعد بهذه الحالة'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // التحقق من المهلة (24 ساعة)
+    final now = DateTime.now();
+    final hoursUntil = appointment.startAt.difference(now).inHours;
+    if (hoursUntil <= 24) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا يمكن إلغاء الموعد قبل أقل من 24 ساعة'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    final reasonController = TextEditingController();
+    
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           title: const Text('إلغاء الموعد'),
-          content: const Text('هل أنت متأكد من رغبتك في إلغاء هذا الموعد؟'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('هل أنت متأكد من رغبتك في إلغاء هذا الموعد؟'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(
+                  labelText: 'سبب الإلغاء (اختياري)',
+                  hintText: 'مثال: تغير في الخطط',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('رجوع'),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('سيتم تطوير هذه الميزة قريباً'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
+              onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
               ),
@@ -783,14 +880,178 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
         ),
       ),
     );
+
+    if (confirmed == true && mounted) {
+      try {
+        setState(() => _isLoading = true);
+
+        final token = await _authService.getToken();
+        await _apiService.cancelAppointment(
+          appointmentId: appointment.id,
+          reason: reasonController.text.isNotEmpty 
+              ? reasonController.text 
+              : null,
+          token: token,
+        );
+
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _appointmentsFuture = _fetchAppointments();
+          });
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم إلغاء الموعد بنجاح'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطأ: ${e.toString().replaceAll('Exception: ', '')}'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    }
   }
 
-  void _rescheduleAppointment(Appointment appointment) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('إعادة جدولة الموعد - سيتم تطوير هذه الميزة قريباً'),
-        behavior: SnackBarBehavior.floating,
+  void _rescheduleAppointment(Appointment appointment) async {
+    // التحقق من الحالة
+    if (appointment.status != 'PENDING_CONFIRM' && 
+        appointment.status != 'CONFIRMED' &&
+        appointment.status != 'PENDING') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا يمكن إعادة جدولة موعد بهذه الحالة'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // التحقق من المهلة (24 ساعة)
+    final now = DateTime.now();
+    final hoursUntil = appointment.startAt.difference(now).inHours;
+    if (hoursUntil <= 24) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا يمكن إعادة جدولة الموعد قبل أقل من 24 ساعة'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // اختيار التاريخ الجديد
+    DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: appointment.startAt.add(const Duration(days: 1)),
+      firstDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('ar', 'SA'),
+      helpText: 'اختر تاريخاً جديداً',
+    );
+
+    if (selectedDate == null || !mounted) return;
+
+    // اختيار الوقت الجديد
+    TimeOfDay? selectedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(appointment.startAt),
+      helpText: 'اختر وقتاً جديداً',
+    );
+
+    if (selectedTime == null || !mounted) return;
+
+    final newStartAt = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+
+    // التأكيد
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('إعادة جدولة الموعد'),
+          content: Text(
+            'هل تريد تغيير الموعد إلى:\n'
+            '${_formatDate(newStartAt)}\n'
+            '${_formatTime(newStartAt)}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('رجوع'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('تأكيد'),
+            ),
+          ],
+        ),
       ),
     );
+
+    if (confirmed == true && mounted) {
+      try {
+        setState(() => _isLoading = true);
+
+        final token = await _authService.getToken();
+        await _apiService.rescheduleAppointment(
+          appointmentId: appointment.id,
+          newStartAt: newStartAt,
+          token: token,
+        );
+
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _appointmentsFuture = _fetchAppointments();
+          });
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم إعادة جدولة الموعد بنجاح'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطأ: ${e.toString().replaceAll('Exception: ', '')}'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    }
   }
 }

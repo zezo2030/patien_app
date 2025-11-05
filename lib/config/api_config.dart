@@ -7,24 +7,55 @@ import 'dart:io';
 class ApiConfig {
   // Base URL للـ API
   // للتطوير المحلي: http://localhost:3000/v1
+  // للأجهزة الفعلية: استخدم IP جهازك مثل http://192.168.1.3:3000/v1
   // للإنتاج: https://your-domain.com/v1
+  
+  // ⚠️ مهم: غيّر هذا الـ IP إلى IP جهازك على الشبكة المحلية
+  // للحصول على IP جهازك: Windows: ipconfig | Mac/Linux: ifconfig
+  // استخدم IP من نفس الشبكة المحلية (WiFi) التي يتصل بها جهاز الموبايل
+  static const String _localIP = '192.168.1.3'; // غيّر هذا إلى IP جهازك
+  
   static const String _devBaseUrl = 'http://localhost:3000/v1';
+  static const String _devBaseUrlPhysicalDevice = 'http://$_localIP:3000/v1';
   static const String _prodBaseUrl = 'https://your-domain.com/v1';
   
   // تحديد البيئة (dev أو prod)
   static const bool _isProduction = false;
   
+  // تحديد ما إذا كان التطبيق يعمل على جهاز فعلي (غير Emulator/Simulator)
+  // يمكن تعيين هذا بناءً على المنصة أو متغير بيئة
+  static const bool _usePhysicalDeviceIP = true; // غيّر إلى true للأجهزة الفعلية
+  
   /// الحصول على Base URL المناسب حسب المنصة والبيئة
   static String get baseUrl {
-    final String base = _isProduction ? _prodBaseUrl : _devBaseUrl;
-    
-    // للـ Android Emulator، استبدل localhost بـ 10.0.2.2
-    if (Platform.isAndroid && base.contains('localhost')) {
-      return base.replaceAll('http://localhost', 'http://10.0.2.2');
+    if (_isProduction) {
+      return _prodBaseUrl;
     }
     
-    // للـ iOS Simulator أو المنصات الأخرى، استخدم localhost
-    return base;
+    // إذا كان يجب استخدام IP للأجهزة الفعلية
+    if (_usePhysicalDeviceIP) {
+      // للـ Android Emulator، استخدم 10.0.2.2
+      if (Platform.isAndroid) {
+        // يمكن التحقق من Emulator vs Physical Device
+        // للآن، نستخدم IP المحلي للأجهزة الفعلية
+        return _devBaseUrlPhysicalDevice;
+      }
+      
+      // للـ iOS Simulator، يمكن استخدام localhost
+      // لكن للأجهزة الفعلية، استخدم IP المحلي
+      if (Platform.isIOS) {
+        return _devBaseUrlPhysicalDevice;
+      }
+    }
+    
+    // للمنصات الأخرى أو Emulator
+    if (Platform.isAndroid) {
+      // Android Emulator
+      return _devBaseUrl.replaceAll('http://localhost', 'http://10.0.2.2');
+    }
+    
+    // Desktop أو iOS Simulator
+    return _devBaseUrl;
   }
   
   /// Timeout للطلبات (بالثواني)
@@ -38,15 +69,8 @@ class ApiConfig {
   
   /// الحصول على Base URL بدون /v1 (للملفات الثابتة)
   static String get baseUrlWithoutV1 {
-    final String base = _isProduction ? _prodBaseUrl : _devBaseUrl;
-    String url = base.replaceAll('/v1', '');
-    
-    // للـ Android Emulator، استبدل localhost بـ 10.0.2.2
-    if (Platform.isAndroid && url.contains('localhost')) {
-      url = url.replaceAll('http://localhost', 'http://10.0.2.2');
-    }
-    
-    return url;
+    final String currentBaseUrl = baseUrl; // استخدم baseUrl getter
+    return currentBaseUrl.replaceAll('/v1', '');
   }
 
   /// بناء URL كامل من مسار نسبي (للملفات الثابتة)

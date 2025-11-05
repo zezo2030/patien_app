@@ -4,6 +4,7 @@ import '../../config/colors.dart';
 import '../../config/text_styles.dart';
 import '../../services/api_service.dart';
 import '../../models/department.dart';
+import '../doctors/doctors_screen.dart';
 
 class DepartmentsScreen extends StatefulWidget {
   const DepartmentsScreen({super.key});
@@ -731,12 +732,13 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () {
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'عرض الأطباء - سيتم تطوير هذه الميزة قريباً',
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DoctorsScreen(
+                                  departmentId: department.id,
+                                  departmentName: department.name,
                                 ),
-                                behavior: SnackBarBehavior.floating,
                               ),
                             );
                           },
@@ -756,12 +758,17 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () {
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'حجز موعد - سيتم تطوير هذه الميزة قريباً',
+                            // التنقل إلى شاشة الأطباء أولاً لاختيار الطبيب
+                            // نمرر departmentId فقط بدون serviceId لأن القسم والخدمة مختلفان
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DoctorsScreen(
+                                  departmentId: department.id,
+                                  departmentName: department.name,
+                                  // لا نمرر serviceId هنا لأنه ليس لدينا خدمة محددة
+                                  // سيتم فلترة الأطباء حسب القسم فقط
                                 ),
-                                behavior: SnackBarBehavior.floating,
                               ),
                             );
                           },

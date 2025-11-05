@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'config/theme.dart';
 import 'config/api_config.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main/main_screen.dart';
+import 'screens/doctor/doctor_main_screen.dart';
+import 'models/user.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -21,10 +24,18 @@ class MyApp extends StatelessWidget {
       title: 'VirClinc',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
+      locale: const Locale('ar', 'SA'),
+      supportedLocales: const [Locale('ar', 'SA'), Locale('en', 'US')],
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const MainScreen(),
+        '/doctor-dashboard': (context) => const DoctorMainScreen(),
       },
     );
   }
@@ -62,6 +73,26 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return _isLoggedIn ? const MainScreen() : const LoginScreen();
+    if (!_isLoggedIn) {
+      return const LoginScreen();
+    }
+
+    // When logged in, determine role and route accordingly
+    return FutureBuilder<User?>(
+      future: _authService.getCurrentUser(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final user = snapshot.data;
+        if (user?.role == 'DOCTOR') {
+          return const DoctorMainScreen();
+        }
+        return const MainScreen();
+      },
+    );
   }
 }

@@ -20,9 +20,24 @@ class _HomeScreenState extends State<HomeScreen> {
   final _authService = AuthService();
   final _apiService = ApiService();
   late final Future _userFuture = _authService.getCurrentUser();
+  final Map<String, String> _doctorNameCache = {};
 
   Future<void> _refreshData() async {
     setState(() {});
+  }
+  Future<String?> _getDoctorName(String doctorId) async {
+    if (doctorId.isEmpty) return null;
+    if (_doctorNameCache.containsKey(doctorId)) return _doctorNameCache[doctorId];
+    try {
+      final token = await _authService.getToken();
+      if (token == null) return null;
+      final doctor = await _apiService.getDoctorById(doctorId: doctorId, token: token);
+      final name = doctor.name;
+      _doctorNameCache[doctorId] = name;
+      return name;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -298,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final appointments = snapshot.data?.appointments ?? [];
               final upcomingAppointments = appointments.where((apt) {
                 final now = DateTime.now();
-                return (apt.status == 'CONFIRMED' || apt.status == 'PENDING') &&
+                return (apt.status == 'CONFIRMED' || apt.status == 'PENDING' || apt.status == 'PENDING_CONFIRM') &&
                     apt.startAt.isAfter(now);
               }).toList()..sort((a, b) => a.startAt.compareTo(b.startAt));
 
@@ -439,7 +454,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAppointmentCard(Appointment appointment) {
-    final doctorName = appointment.doctor?.name ?? 'طبيب غير محدد';
+    final knownDoctorName = appointment.doctor?.name;
     final serviceName = appointment.service?.name ?? 'خدمة غير محددة';
     final dateStr =
         '${appointment.startAt.day}/${appointment.startAt.month}/${appointment.startAt.year}';
@@ -492,12 +507,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'د. $doctorName',
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        fontWeight: FontWeight.bold,
+                    if (knownDoctorName != null && knownDoctorName.isNotEmpty)
+                      Text(
+                        'د. $knownDoctorName',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    else
+                      FutureBuilder<String?>(
+                        future: _getDoctorName(appointment.doctorId),
+                        builder: (context, snapshot) {
+                          final name = snapshot.data;
+                          return Text(
+                            'د. ${name != null && name.isNotEmpty ? name : 'طبيب غير محدد'}',
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
                       ),
-                    ),
                     const SizedBox(height: 4),
                     Text(
                       serviceName,
@@ -641,13 +670,13 @@ class _HomeScreenState extends State<HomeScreen> {
       final appointments = await _apiService.getPatientAppointments(
         status: null,
         token: token,
-        limit: 1000,
+        limit: 100,
       );
 
       // Get medical records count
       final records = await _apiService.getPatientMedicalRecords(
         token: token,
-        limit: 1000,
+        limit: 100,
       );
 
       return {

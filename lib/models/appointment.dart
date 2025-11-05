@@ -1,3 +1,44 @@
+// Enum للحالات
+enum AppointmentStatus {
+  pendingConfirm('PENDING_CONFIRM', 'في انتظار التأكيد'),
+  confirmed('CONFIRMED', 'مؤكد'),
+  cancelled('CANCELLED', 'ملغى'),
+  completed('COMPLETED', 'مكتمل'),
+  noShow('NO_SHOW', 'لم يحضر'),
+  rejected('REJECTED', 'مرفوض');
+
+  final String value;
+  final String arabicLabel;
+  const AppointmentStatus(this.value, this.arabicLabel);
+
+  static AppointmentStatus? fromString(String? status) {
+    if (status == null) return null;
+    return AppointmentStatus.values.firstWhere(
+      (e) => e.value == status,
+      orElse: () => AppointmentStatus.pendingConfirm,
+    );
+  }
+}
+
+// Enum للأنواع
+enum AppointmentType {
+  inPerson('IN_PERSON', 'حضور شخصي'),
+  video('VIDEO', 'مكالمة فيديو'),
+  chat('CHAT', 'محادثة نصية');
+
+  final String value;
+  final String arabicLabel;
+  const AppointmentType(this.value, this.arabicLabel);
+
+  static AppointmentType? fromString(String? type) {
+    if (type == null) return null;
+    return AppointmentType.values.firstWhere(
+      (e) => e.value == type,
+      orElse: () => AppointmentType.inPerson,
+    );
+  }
+}
+
 class Appointment {
   final String id;
   final String doctorId;
@@ -13,6 +54,17 @@ class Appointment {
   final String? notes;
   final DoctorInfo? doctor;
   final ServiceInfo? service;
+  
+  // الحقول الجديدة
+  final int? duration;
+  final DateTime? holdExpiresAt;
+  final String? idempotencyKey;
+  final Map<String, dynamic>? metadata;
+  final String? cancellationReason;
+  final DateTime? cancelledAt;
+  final String? cancelledBy;
+  final bool? requiresPayment;
+  final String? paymentId;
 
   Appointment({
     required this.id,
@@ -29,16 +81,56 @@ class Appointment {
     this.notes,
     this.doctor,
     this.service,
+    this.duration,
+    this.holdExpiresAt,
+    this.idempotencyKey,
+    this.metadata,
+    this.cancellationReason,
+    this.cancelledAt,
+    this.cancelledBy,
+    this.requiresPayment,
+    this.paymentId,
   });
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
+    // Extract doctor info - check for populated 'doctor' field first, then fall back to 'doctorId' as Map
+    DoctorInfo? doctor;
+    if (json['doctor'] != null && json['doctor'] is Map) {
+      doctor = DoctorInfo.fromJson(json['doctor']);
+    } else if (json['doctorId'] is Map && (json['doctorId']['name'] != null || json['doctorId']['_id'] != null)) {
+      doctor = DoctorInfo.fromJson(json['doctorId']);
+    }
+    
+    // Extract service info - check for populated 'service' field first, then fall back to 'serviceId' as Map
+    ServiceInfo? service;
+    if (json['service'] != null && json['service'] is Map) {
+      service = ServiceInfo.fromJson(json['service']);
+    } else if (json['serviceId'] is Map && (json['serviceId']['name'] != null || json['serviceId']['_id'] != null)) {
+      service = ServiceInfo.fromJson(json['serviceId']);
+    }
+    
+    // Extract IDs - handle both string and Map formats
+    String doctorIdStr = '';
+    if (json['doctorId'] is Map) {
+      doctorIdStr = json['doctorId']['_id']?.toString() ?? 
+                    json['doctorId']['id']?.toString() ?? '';
+    } else {
+      doctorIdStr = json['doctorId']?.toString() ?? '';
+    }
+    
+    String serviceIdStr = '';
+    if (json['serviceId'] is Map) {
+      serviceIdStr = json['serviceId']['_id']?.toString() ?? 
+                     json['serviceId']['id']?.toString() ?? '';
+    } else {
+      serviceIdStr = json['serviceId']?.toString() ?? '';
+    }
+    
     return Appointment(
       id: json['_id'] ?? json['id'] ?? '',
-      doctorId: json['doctorId']['_id']?.toString() ?? 
-                json['doctorId'].toString(),
-      serviceId: json['serviceId']['_id']?.toString() ?? 
-                 json['serviceId'].toString(),
-      patientId: json['patientId'].toString(),
+      doctorId: doctorIdStr,
+      serviceId: serviceIdStr,
+      patientId: json['patientId']?.toString() ?? '',
       startAt: DateTime.parse(json['startAt']),
       endAt: DateTime.parse(json['endAt']),
       status: json['status'] ?? '',
@@ -47,13 +139,35 @@ class Appointment {
       paymentStatus: json['paymentStatus'],
       location: json['location'],
       notes: json['notes'],
-      doctor: json['doctorId'] is Map 
-          ? DoctorInfo.fromJson(json['doctorId'])
+      doctor: doctor,
+      service: service,
+      duration: json['duration']?.toInt(),
+      holdExpiresAt: json['holdExpiresAt'] != null 
+          ? DateTime.parse(json['holdExpiresAt']) 
           : null,
-      service: json['serviceId'] is Map
-          ? ServiceInfo.fromJson(json['serviceId'])
+      idempotencyKey: json['idempotencyKey'],
+      metadata: json['metadata'] != null 
+          ? Map<String, dynamic>.from(json['metadata']) 
           : null,
+      cancellationReason: json['cancellationReason'],
+      cancelledAt: json['cancelledAt'] != null 
+          ? DateTime.parse(json['cancelledAt']) 
+          : null,
+      cancelledBy: json['cancelledBy']?.toString(),
+      requiresPayment: json['requiresPayment'] ?? false,
+      paymentId: json['paymentId']?.toString(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'doctorId': doctorId,
+      'serviceId': serviceId,
+      'startAt': startAt.toUtc().toIso8601String(),
+      'type': type,
+      if (metadata != null) 'metadata': metadata,
+      if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
+    };
   }
 }
 

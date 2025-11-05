@@ -56,8 +56,62 @@ class AuthService {
     }
   }
   
-  // Get current user
-  Future<User?> getCurrentUser() async {
+  // Get current user - tries API first, falls back to local storage
+  Future<User?> getCurrentUser({bool forceRefresh = false}) async {
+    final token = await getToken();
+    
+    // If no token, return null
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+    
+    // If forceRefresh is true, only fetch from API
+    if (forceRefresh) {
+      try {
+        final user = await _apiService.getCurrentUserProfile(token);
+        await _saveUserData(user);
+        return user;
+      } catch (e) {
+        print('❌ Error fetching user from API: $e');
+        // If API fails, try local storage as fallback
+        return _getUserFromLocalStorage();
+      }
+    }
+    
+    // Try API first, fallback to local storage
+    try {
+      final user = await _apiService.getCurrentUserProfile(token);
+      await _saveUserData(user);
+      return user;
+    } catch (e) {
+      print('⚠️ API call failed, using local storage: $e');
+      // Check if it's a 401 error (unauthorized)
+      if (e.toString().contains('401') || 
+          e.toString().contains('انتهت صلاحية') ||
+          e.toString().contains('غير مصرح')) {
+        // Clear local data on 401
+        await logout();
+        return null;
+      }
+      // For other errors (network, etc.), use local storage as fallback
+      return _getUserFromLocalStorage();
+    }
+  }
+  
+  // Refresh current user from server only
+  Future<User> refreshCurrentUser() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('غير مصرح - يرجى تسجيل الدخول');
+    }
+    
+    final user = await _apiService.getCurrentUserProfile(token);
+    await _saveUserData(user);
+    return user;
+  }
+  
+  // Get user from local storage (helper method)
+  Future<User?> _getUserFromLocalStorage() async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString(_userKey);
     if (userJson != null) {
@@ -69,6 +123,17 @@ class AuthService {
       }
     }
     return null;
+  }
+  
+  // Save user data to local storage (helper method)
+  Future<void> _saveUserData(User user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_userKey, jsonEncode(user.toJson()));
+      print('💾 User data saved to local storage: ${user.name} (${user.email})');
+    } catch (e) {
+      print('❌ Error saving user data: $e');
+    }
   }
   
   // Get auth token

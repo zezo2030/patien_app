@@ -63,10 +63,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await _authService.login(request);
 
+      // Determine user role and navigate accordingly
+      final user = await _authService.getCurrentUser();
+
       if (mounted) {
-        print('✅ Login successful, navigating to home');
-        // Navigate to home screen after successful login
-        Navigator.of(context).pushReplacementNamed('/home');
+        if (user?.role == 'DOCTOR') {
+          print('✅ Login successful, navigating to doctor dashboard');
+          Navigator.of(context).pushReplacementNamed('/doctor-dashboard');
+        } else {
+          print('✅ Login successful, navigating to home');
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
       }
     } catch (e) {
       print('❌ Login error in UI: $e');
