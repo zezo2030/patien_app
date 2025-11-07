@@ -169,6 +169,16 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       return false;
     }
 
+    // في وضع الاختبار: السماح ببدء المكالمة فورًا لأي موعد فيديو ما لم يكن ملغى أو منتهي
+    if (TestConfig.isTestModeEnabled) {
+      const blockedStatuses = {'CANCELLED', 'REJECTED', 'COMPLETED'};
+      final status = widget.appointment.status;
+      if (blockedStatuses.contains(status)) {
+        return false;
+      }
+      return true;
+    }
+
     // Check if appointment is confirmed
     if (widget.appointment.status != 'CONFIRMED') {
       return false;

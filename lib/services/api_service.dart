@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -18,6 +19,30 @@ class ApiService {
   // Base URL from config
   static String get baseUrl => ApiConfig.baseUrl;
   
+  // Health check method to test server connectivity
+  Future<bool> checkServerHealth() async {
+    try {
+      print('🏥 Checking server health at: ${baseUrl}/health');
+      final response = await http.get(
+        Uri.parse('${baseUrl}/health'),
+        headers: ApiConfig.defaultHeaders,
+      ).timeout(
+        Duration(seconds: 5),
+        onTimeout: () {
+          print('❌ Health check timeout');
+          return http.Response('Timeout', 408);
+        },
+      );
+      
+      final isHealthy = response.statusCode == 200;
+      print('🏥 Health check result: ${isHealthy ? "✅ Server is reachable" : "❌ Server returned ${response.statusCode}"}');
+      return isHealthy;
+    } catch (e) {
+      print('❌ Health check failed: $e');
+      return false;
+    }
+  }
+
   // Helper method for POST requests
   Future<http.Response> post(
     String endpoint,
@@ -41,7 +66,17 @@ class ApiService {
       ).timeout(
         Duration(seconds: ApiConfig.requestTimeout),
         onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+          print('⏱️ Request timeout after ${ApiConfig.requestTimeout}s');
+          throw TimeoutException(
+            'انتهت مهلة الاتصال بعد ${ApiConfig.requestTimeout} ثانية.\n'
+            'الخادم: $url\n'
+            'تأكد من:\n'
+            '1. أن الخادم يعمل على ${baseUrl}\n'
+            '2. أن IP العنوان صحيح (${url.host})\n'
+            '3. أن الجهاز والكمبيوتر على نفس الشبكة\n'
+            '4. أن Firewall لا يمنع الاتصال',
+            Duration(seconds: ApiConfig.requestTimeout),
+          );
         },
       );
       
@@ -49,13 +84,31 @@ class ApiService {
       print('📥 Response Body: ${response.body}');
       
       return response;
-    } on SocketException {
-      throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على ${baseUrl}');
-    } on HttpException {
-      throw Exception('خطأ في الاتصال بالخادم');
+    } on SocketException catch (e) {
+      print('❌ SocketException: $e');
+      throw Exception(
+        'لا يمكن الاتصال بالخادم.\n'
+        'الخادم: $url\n'
+        'تأكد من:\n'
+        '1. أن الخادم يعمل: cd new/clinic-api && npm run start:dev\n'
+        '2. أن IP العنوان صحيح: ${url.host}\n'
+        '3. أن الجهاز والكمبيوتر على نفس الشبكة WiFi\n'
+        '4. أن Firewall يسمح بالاتصال على المنفذ 3000'
+      );
+    } on TimeoutException catch (e) {
+      print('❌ TimeoutException: $e');
+      rethrow;
+    } on HttpException catch (e) {
+      print('❌ HttpException: $e');
+      throw Exception('خطأ في الاتصال بالخادم: $e');
     } catch (e) {
-      if (e.toString().contains('timeout')) {
-        throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+      print('❌ Unexpected error: $e');
+      if (e.toString().contains('timeout') || e is TimeoutException) {
+        throw Exception(
+          'انتهت مهلة الاتصال.\n'
+          'الخادم: $url\n'
+          'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.'
+        );
       }
       throw Exception('خطأ في الاتصال: ${e.toString()}');
     }
@@ -78,7 +131,13 @@ class ApiService {
       final response = await http.get(url, headers: defaultHeaders).timeout(
         Duration(seconds: ApiConfig.requestTimeout),
         onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+          print('⏱️ GET request timeout after ${ApiConfig.requestTimeout}s');
+          throw TimeoutException(
+            'انتهت مهلة الاتصال بعد ${ApiConfig.requestTimeout} ثانية.\n'
+            'الخادم: $url\n'
+            'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.',
+            Duration(seconds: ApiConfig.requestTimeout),
+          );
         },
       );
       
@@ -86,13 +145,27 @@ class ApiService {
       print('📥 Response Body: ${response.body}');
       
       return response;
-    } on SocketException {
-      throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على ${baseUrl}');
-    } on HttpException {
-      throw Exception('خطأ في الاتصال بالخادم');
+    } on SocketException catch (e) {
+      print('❌ SocketException: $e');
+      throw Exception(
+        'لا يمكن الاتصال بالخادم.\n'
+        'الخادم: $url\n'
+        'تأكد من أن الخادم يعمل على ${baseUrl}'
+      );
+    } on TimeoutException catch (e) {
+      print('❌ TimeoutException: $e');
+      rethrow;
+    } on HttpException catch (e) {
+      print('❌ HttpException: $e');
+      throw Exception('خطأ في الاتصال بالخادم: $e');
     } catch (e) {
-      if (e.toString().contains('timeout')) {
-        throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+      print('❌ Unexpected error: $e');
+      if (e.toString().contains('timeout') || e is TimeoutException) {
+        throw Exception(
+          'انتهت مهلة الاتصال.\n'
+          'الخادم: $url\n'
+          'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.'
+        );
       }
       throw Exception('خطأ في الاتصال: ${e.toString()}');
     }
@@ -101,6 +174,14 @@ class ApiService {
   // Login
   Future<AuthResponse> login(LoginRequest request) async {
     try {
+      // Optional: Check server health before login (can be disabled for faster login)
+      // Uncomment the following lines to enable health check:
+      // print('🔍 Checking server connectivity...');
+      // final isHealthy = await checkServerHealth();
+      // if (!isHealthy) {
+      //   throw Exception('الخادم غير متاح. تأكد من أن Backend يعمل على ${baseUrl}');
+      // }
+      
       final response = await post('/auth/login', request.toJson());
       
       // Accept both 200 and 201 as success status codes

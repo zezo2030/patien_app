@@ -132,6 +132,8 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen>
   }
 
   Widget? _buildActionsFor(Appointment a) {
+    final canStartVideoCall = _canStartVideoCall(a);
+
     if (a.status == 'PENDING_CONFIRM') {
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -144,14 +146,18 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen>
             icon: const Icon(Icons.cancel, color: Colors.red),
             onPressed: () => _rejectAppointment(a),
           ),
+          if (canStartVideoCall)
+            IconButton(
+              icon: const Icon(Icons.videocam, color: Colors.blue),
+              tooltip: 'بدء مكالمة الفيديو',
+              onPressed: () => _startVideoCall(a),
+            ),
         ],
       );
     }
     
-    // في وضع الاختبار: إضافة زر لبدء مكالمة الفيديو للمواعيد المؤكدة من نوع VIDEO
-    if (a.status == 'CONFIRMED' && 
-        a.type == 'VIDEO' && 
-        TestConfig.isTestModeEnabled) {
+    // زر بدء مكالمة الفيديو عندما يكون متاحًا (يشمل وضع الاختبار)
+    if (canStartVideoCall) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -179,6 +185,16 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen>
     // Check if appointment type is VIDEO
     if (appointment.type != 'VIDEO') {
       return false;
+    }
+
+    // في وضع الاختبار: السماح ببدء المكالمة فورًا لأي موعد فيديو ما لم يكن ملغى أو منتهي
+    if (TestConfig.isTestModeEnabled) {
+      const blockedStatuses = {'CANCELLED', 'REJECTED', 'COMPLETED'};
+      final status = appointment.status;
+      if (blockedStatuses.contains(status)) {
+        return false;
+      }
+      return true;
     }
 
     // Check if appointment is confirmed

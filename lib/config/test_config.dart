@@ -1,5 +1,5 @@
 /// إعدادات الاختبار
-/// 
+///
 /// هذا الملف يحتوي على flags للاختبار التي تسمح بتجاوز بعض القيود
 /// ⚠️ تحذير: يجب تعطيل هذه الإعدادات في الإنتاج
 class TestConfig {
@@ -28,6 +28,8 @@ class TestConfig {
   static bool get shouldBypassPayment => enableTestMode && bypassPaymentCheck;
 
   /// التحقق من السماح بالحجز بعد 10 دقائق
-  static bool get shouldAllowQuickBooking => enableTestMode && allowBookingAfter10Minutes;
+  static bool get shouldAllowQuickBooking =>
+      enableTestMode && allowBookingAfter10Minutes;
 }
+
 
