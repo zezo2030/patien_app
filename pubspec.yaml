@@ -51,6 +51,13 @@ dependencies:
   
   # Permission handler for requesting camera and microphone permissions
   permission_handler: ^11.3.1
+  
+  # Firebase
+  firebase_core: ^3.0.0
+  firebase_messaging: ^15.0.0
+  
+  # Local notifications for foreground notifications
+  flutter_local_notifications: ^19.5.0
 
 dev_dependencies:
   flutter_test:

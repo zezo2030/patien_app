@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "927142922437",
+    "project_id": "virclinic-fcf3e",
+    "storage_bucket": "virclinic-fcf3e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:927142922437:android:10a4023669fab6189188ac",
+        "android_client_info": {
+          "package_name": "com.example.patien_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsZS_TsGvqnFfRb310I6UquhEqwdFl11E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

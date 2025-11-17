@@ -115,10 +115,9 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen>
                 style: AppTextStyles.bodyLarge,
               ),
               subtitle: Text(
-                '${a.startAt} • ${a.status}' +
-                    (a.status == 'CONFIRMED' && (a.paymentStatus ?? '') != 'COMPLETED'
+                '${a.startAt} • ${a.status}${a.status == 'CONFIRMED' && (a.paymentStatus ?? '') != 'COMPLETED'
                         ? ' • الدفع قيد الانتظار'
-                        : ''),
+                        : ''}',
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
               ),
               trailing: _buildActionsFor(a),

@@ -530,7 +530,7 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                       ),
                       child: Switch(
                         value: day.isAvailable,
-                        activeColor: AppColors.success,
+                        activeThumbColor: AppColors.success,
                         onChanged: (v) => setState(() {
                           day.isAvailable = v;
                           if (v && day.slots.isEmpty) {
@@ -755,7 +755,7 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
       },
     );
     if (res == null) return null;
-    return _fmt2(res.hour) + ':' + _fmt2(res.minute);
+    return '${_fmt2(res.hour)}:${_fmt2(res.minute)}';
   }
 
   String _fmt2(int v) => v.toString().padLeft(2, '0');

@@ -5,9 +5,11 @@ import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/auth_response.dart';
 import 'api_service.dart';
+import 'notification_service.dart';
 
 class AuthService {
   final ApiService _apiService = ApiService();
+  final NotificationService _notificationService = NotificationService();
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
   
@@ -20,6 +22,17 @@ class AuthService {
       
       await _saveAuthData(response);
       print('💾 Auth data saved to local storage');
+      
+      // Send device token to backend for push notifications
+      try {
+        final userId = response.user.id;
+        if (userId != null && userId.isNotEmpty) {
+          await _notificationService.sendTokenToBackend(userId, response.accessToken);
+        }
+      } catch (e) {
+        print('⚠️ Failed to send device token to backend: $e');
+        // Don't fail login if token sending fails
+      }
       
       return response;
     } catch (e) {
@@ -150,6 +163,21 @@ class AuthService {
   
   // Logout
   Future<void> logout() async {
+    // Get user ID and token before clearing
+    final user = await _getUserFromLocalStorage();
+    final token = await getToken();
+    
+    // Delete device token from backend
+    if (user?.id != null && token != null && user!.id!.isNotEmpty) {
+      try {
+        await _notificationService.deleteTokenFromBackend(user!.id!, token);
+      } catch (e) {
+        print('⚠️ Failed to delete device token from backend: $e');
+        // Don't fail logout if token deletion fails
+      }
+    }
+    
+    // Clear local storage
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);

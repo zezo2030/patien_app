@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../models/appointment.dart';
 import '../../models/doctor.dart';
 import '../video_call/video_call_screen.dart';
+import '../chat/chat_screen.dart';
 
 class AppointmentDetailsScreen extends StatefulWidget {
   final Appointment appointment;
@@ -235,6 +236,93 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
             builder: (context) => VideoCallScreen(
               appointmentId: widget.appointment.id,
               role: role,
+              doctorName: widget.appointment.doctor?.name ?? _doctor?.name,
+              patientName: user.name,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  bool _canStartChat() {
+    // Check if appointment type is CHAT
+    if (widget.appointment.type != 'CHAT') {
+      return false;
+    }
+
+    // في وضع الاختبار: السماح ببدء المحادثة فورًا لأي موعد محادثة ما لم يكن ملغى أو منتهي
+    if (TestConfig.isTestModeEnabled) {
+      const blockedStatuses = {'CANCELLED', 'REJECTED', 'COMPLETED'};
+      final status = widget.appointment.status;
+      if (blockedStatuses.contains(status)) {
+        return false;
+      }
+      return true;
+    }
+
+    // Check if appointment is confirmed
+    if (widget.appointment.status != 'CONFIRMED') {
+      return false;
+    }
+
+    // في وضع الاختبار: تجاوز التحقق من الدفع والوقت
+    if (TestConfig.shouldBypassPayment) {
+      // في وضع الاختبار، نسمح ببدء المحادثة في أي وقت (للمواعيد المؤكدة)
+      return true;
+    }
+
+    // في الوضع العادي: التحقق من الدفع إذا كان مطلوباً
+    if (widget.appointment.requiresPayment == true) {
+      // التحقق من حالة الدفع
+      if (widget.appointment.paymentStatus != 'PAID' && 
+          widget.appointment.paymentStatus != 'COMPLETED') {
+        return false;
+      }
+    }
+
+    final now = DateTime.now();
+    final appointmentStart = widget.appointment.startAt;
+    final appointmentEnd = widget.appointment.endAt;
+
+    // Check if time is within valid range (T-10 minutes to end)
+    final minutesUntilStart = appointmentStart.difference(now).inMinutes;
+    final isAfterEnd = now.isAfter(appointmentEnd);
+
+    // Can start if: within 10 minutes before start OR after start but before end
+    return (minutesUntilStart <= 10 && !isAfterEnd);
+  }
+
+  void _startChat() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('يجب تسجيل الدخول أولاً'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Navigate to chat screen
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              appointmentId: widget.appointment.id,
               doctorName: widget.appointment.doctor?.name ?? _doctor?.name,
               patientName: user.name,
             ),
@@ -929,6 +1017,34 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // Chat Button
+                    if (_canStartChat()) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _startChat,
+                          icon: const Icon(Iconsax.message, size: 24),
+                          label: const Text(
+                            'بدء المحادثة',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             shape: RoundedRectangleBorder(

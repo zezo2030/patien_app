@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'config/theme.dart';
 import 'config/api_config.dart';
 import 'screens/auth/login_screen.dart';
@@ -7,8 +9,21 @@ import 'screens/main/main_screen.dart';
 import 'screens/doctor/doctor_main_screen.dart';
 import 'models/user.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize Notification Service
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+  
   // Print API configuration for debugging
   ApiConfig.printConfig();
 

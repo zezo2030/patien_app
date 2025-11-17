@@ -5,7 +5,6 @@ import '../../config/text_styles.dart';
 import '../../config/test_config.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
-import '../../models/appointment.dart';
 import '../doctors/doctors_screen.dart';
 import '../video_call/video_call_screen.dart';
 

@@ -16,9 +16,13 @@ class ApiConfig {
   // استخدم IP من نفس الشبكة المحلية (WiFi) التي يتصل بها جهاز الموبايل
   // static const String _localIP = '192.168.1.3'; // غيّر هذا إلى IP جهازك
 
-  static const String _devBaseUrl = 'http://medcodesa.cloud/api';
-  static const String _devBaseUrlPhysicalDevice = 'http://medcodesa.cloud/api';
-  static const String _prodBaseUrl = 'https://medcodesa.cloud/api';
+  // static const String _devBaseUrl = 'http://medcodesa.cloud/api';
+  // static const String _devBaseUrlPhysicalDevice = 'http://medcodesa.cloud/api';
+  // static const String _prodBaseUrl = 'https://medcodesa.cloud/api';
+
+  static const String _devBaseUrl = 'http://192.168.1.3/api';
+  static const String _devBaseUrlPhysicalDevice = 'http://192.168.1.3/api';
+  static const String _prodBaseUrl = 'http://192.168.1.3/api';
 
   // تحديد البيئة (dev أو prod)
   static const bool _isProduction = false;
@@ -26,7 +30,7 @@ class ApiConfig {
   // تحديد ما إذا كان التطبيق يعمل على جهاز فعلي (غير Emulator/Simulator)
   // يمكن تعيين هذا بناءً على المنصة أو متغير بيئة
   static const bool _usePhysicalDeviceIP =
-      true; // غيّر إلى true للأجهزة الفعلية
+      false; // غيّر إلى true للأجهزة الفعلية
 
   /// الحصول على Base URL المناسب حسب المنصة والبيئة
   static String get baseUrl {
