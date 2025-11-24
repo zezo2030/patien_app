@@ -356,17 +356,17 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   }
 
   Widget _buildLoadingView() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             color: AppColors.primary,
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'جاري تهيئة المكالمة...',
-            style: TextStyle(
+            style: AppTextStyles.bodyLarge.copyWith(
               color: Colors.white,
               fontSize: 16,
             ),
@@ -377,17 +377,17 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   }
 
   Widget _buildConnectingView() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             color: AppColors.primary,
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'جاري الاتصال...',
-            style: TextStyle(
+            style: AppTextStyles.bodyLarge.copyWith(
               color: Colors.white,
               fontSize: 16,
             ),
@@ -584,7 +584,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(
+          style: AppTextStyles.caption.copyWith(
             color: Colors.white,
             fontSize: 12,
           ),

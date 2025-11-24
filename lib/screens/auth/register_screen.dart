@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../config/colors.dart';
 import '../../config/text_styles.dart';
 import '../../config/dimensions.dart';
@@ -25,11 +27,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
-  
+  final _imagePicker = ImagePicker();
+
   bool _isLoading = false;
   String? _errorMessage;
   final bool _obscurePassword = true;
   final bool _obscureConfirmPassword = true;
+  File? _selectedImage;
 
   @override
   void dispose() {
@@ -39,6 +43,88 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء اختيار الصورة: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء التقاط الصورة: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('اختر مصدر الصورة'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('من المعرض'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('التقاط صورة'),
+              onTap: () {
+                Navigator.pop(context);
+                _takePhoto();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _handleRegister() async {
@@ -51,16 +137,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _confirmPasswordController.text,
       _passwordController.text,
     );
-    
-    if (nameError != null || emailError != null || phoneError != null || 
-        passwordError != null || confirmPasswordError != null) {
+
+    if (nameError != null ||
+        emailError != null ||
+        phoneError != null ||
+        passwordError != null ||
+        confirmPasswordError != null) {
       setState(() {
-        _errorMessage = nameError ?? emailError ?? phoneError ?? 
-                       passwordError ?? confirmPasswordError;
+        _errorMessage =
+            nameError ??
+            emailError ??
+            phoneError ??
+            passwordError ??
+            confirmPasswordError;
       });
       return;
     }
-    
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -78,22 +171,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
       );
 
-      final user = await _authService.register(request);
+      // Register with avatar file if selected
+      final user = await _authService.register(
+        request,
+        avatarFile: _selectedImage,
+      );
 
       if (mounted) {
         // Show success message and navigate to login
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تم التسجيل بنجاح! مرحباً ${user.name}، يمكنك تسجيل الدخول الآن'),
+            content: Text(
+              'تم التسجيل بنجاح! مرحباً ${user.name}، يمكنك تسجيل الدخول الآن',
+            ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
           ),
         );
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const LoginScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       }
     } catch (e) {
@@ -132,29 +229,91 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: AppTextStyles.headline2,
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   SizedBox(height: AppDimensions.spacingSM),
-                  
+
                   Text(
                     'املأ البيانات التالية لإنشاء حسابك',
                     style: AppTextStyles.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   SizedBox(height: AppDimensions.spacingLG),
-                  
+
                   // Card
                   AppCard(
                     padding: EdgeInsets.all(AppDimensions.spacingLG),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Profile Picture Selection
+                        Center(
+                          child: Column(
+                            children: [
+                              GestureDetector(
+                                onTap: _showImageSourceDialog,
+                                child: Stack(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 50,
+                                      backgroundColor: AppColors.primary
+                                          .withOpacity(0.1),
+                                      backgroundImage: _selectedImage != null
+                                          ? FileImage(_selectedImage!)
+                                          : null,
+                                      child: _selectedImage == null
+                                          ? Icon(
+                                              Icons.person,
+                                              size: 50,
+                                              color: AppColors.primary,
+                                            )
+                                          : null,
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          size: 20,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: _showImageSourceDialog,
+                                child: Text(
+                                  _selectedImage == null
+                                      ? 'إضافة صورة شخصية'
+                                      : 'تغيير الصورة',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: AppDimensions.spacingLG),
+
                         // Name Field
                         Builder(
                           builder: (context) {
                             String? nameError;
                             if (_nameController.text.isNotEmpty) {
-                              nameError = Validators.validateName(_nameController.text);
+                              nameError = Validators.validateName(
+                                _nameController.text,
+                              );
                             }
                             return AppInputField(
                               label: 'الاسم الكامل',
@@ -174,15 +333,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             );
                           },
                         ),
-                        
+
                         SizedBox(height: AppDimensions.spacingMD),
-                        
+
                         // Email Field
                         Builder(
                           builder: (context) {
                             String? emailError;
                             if (_emailController.text.isNotEmpty) {
-                              emailError = Validators.validateEmail(_emailController.text);
+                              emailError = Validators.validateEmail(
+                                _emailController.text,
+                              );
                             }
                             return AppInputField(
                               label: 'البريد الإلكتروني',
@@ -202,15 +363,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             );
                           },
                         ),
-                        
+
                         SizedBox(height: AppDimensions.spacingMD),
-                        
+
                         // Phone Field
                         Builder(
                           builder: (context) {
                             String? phoneError;
                             if (_phoneController.text.isNotEmpty) {
-                              phoneError = Validators.validatePhone(_phoneController.text);
+                              phoneError = Validators.validatePhone(
+                                _phoneController.text,
+                              );
                             }
                             return AppInputField(
                               label: 'رقم الهاتف',
@@ -230,15 +393,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             );
                           },
                         ),
-                        
+
                         SizedBox(height: AppDimensions.spacingMD),
-                        
+
                         // Password Field
                         Builder(
                           builder: (context) {
                             String? passwordError;
                             if (_passwordController.text.isNotEmpty) {
-                              passwordError = Validators.validatePassword(_passwordController.text);
+                              passwordError = Validators.validatePassword(
+                                _passwordController.text,
+                              );
                             }
                             return AppInputField(
                               label: 'كلمة المرور',
@@ -258,18 +423,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             );
                           },
                         ),
-                        
+
                         SizedBox(height: AppDimensions.spacingMD),
-                        
+
                         // Confirm Password Field
                         Builder(
                           builder: (context) {
                             String? confirmPasswordError;
                             if (_confirmPasswordController.text.isNotEmpty) {
-                              confirmPasswordError = Validators.validateConfirmPassword(
-                                _confirmPasswordController.text,
-                                _passwordController.text,
-                              );
+                              confirmPasswordError =
+                                  Validators.validateConfirmPassword(
+                                    _confirmPasswordController.text,
+                                    _passwordController.text,
+                                  );
                             }
                             return AppInputField(
                               label: 'تأكيد كلمة المرور',
@@ -290,13 +456,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             );
                           },
                         ),
-                        
+
                         SizedBox(height: AppDimensions.spacingXS),
-                        
+
                         // Error Message
                         if (_errorMessage != null)
                           Padding(
-                            padding: EdgeInsets.only(top: AppDimensions.spacingSM),
+                            padding: EdgeInsets.only(
+                              top: AppDimensions.spacingSM,
+                            ),
                             child: Text(
                               _errorMessage!,
                               style: AppTextStyles.caption.copyWith(
@@ -305,9 +473,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               textAlign: TextAlign.center,
                             ),
                           ),
-                        
+
                         SizedBox(height: AppDimensions.spacingLG),
-                        
+
                         // Register Button
                         PrimaryButton(
                           text: 'إنشاء الحساب',
@@ -315,9 +483,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           icon: Icons.person_add,
                           onPressed: _handleRegister,
                         ),
-                        
+
                         SizedBox(height: AppDimensions.spacingMD),
-                        
+
                         // Login Link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -356,4 +524,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-

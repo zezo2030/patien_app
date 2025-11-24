@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../../config/colors.dart';
 import '../../config/text_styles.dart';
+import '../../config/dimensions.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
+import '../../models/department.dart';
 import '../departments/departments_screen.dart';
 import '../appointments/appointments_screen.dart';
+import '../../config/api_config.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,10 +24,21 @@ class _HomeScreenState extends State<HomeScreen> {
   final _apiService = ApiService();
   late final Future _userFuture = _authService.getCurrentUser();
   final Map<String, String> _doctorNameCache = {};
+  
+  late Future<List<Department>> _departmentsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _departmentsFuture = _apiService.getPublicDepartments();
+  }
 
   Future<void> _refreshData() async {
-    setState(() {});
+    setState(() {
+      _departmentsFuture = _apiService.getPublicDepartments();
+    });
   }
+
   Future<String?> _getDoctorName(String doctorId) async {
     if (doctorId.isEmpty) return null;
     if (_doctorNameCache.containsKey(doctorId)) return _doctorNameCache[doctorId];
@@ -46,71 +60,120 @@ class _HomeScreenState extends State<HomeScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: FutureBuilder(
-            future: _userFuture,
-            builder: (context, snapshot) {
-              if (snapshot.hasData && snapshot.data != null) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'مرحباً، ${snapshot.data!.name}',
-                      style: AppTextStyles.headline3.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+        body: CustomScrollView(
+          slivers: [
+            // App Bar with Gradient
+            SliverAppBar(
+              expandedHeight: 180,
+              floating: false,
+              pinned: true,
+              elevation: 0,
+              backgroundColor: AppColors.primary,
+              flexibleSpace: FlexibleSpaceBar(
+                title: FutureBuilder(
+                  future: _userFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data != null) {
+                      return Text(
+                        'مرحباً، ${snapshot.data!.name}',
+                        style: AppTextStyles.headline3.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    }
+                    return const Text('مرحباً');
+                  },
+                ),
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: AppColors.gradientPrimary,
                     ),
-                    Text(
-                      'كيف يمكننا مساعدتك اليوم؟',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: -50,
+                        right: -50,
+                        child: Container(
+                          width: 200,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              }
-              return const Text('VirClinc');
-            },
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Iconsax.notification),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('الإشعارات - قريباً')),
-                );
-              },
-            ),
-          ],
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: AppColors.gradientPrimary,
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
+                      Positioned(
+                        bottom: -30,
+                        left: -30,
+                        child: Container(
+                          width: 150,
+                          height: 150,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.08),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-        body: RefreshIndicator(
-          onRefresh: _refreshData,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildQuickActions(),
-                const SizedBox(height: 24),
-                _buildUpcomingAppointments(),
-                const SizedBox(height: 24),
-                _buildHealthStats(),
-                const SizedBox(height: 24),
-                _buildRecentRecords(),
+              actions: [
+                IconButton(
+                  icon: const Icon(Iconsax.notification),
+                  color: Colors.white,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('الإشعارات - قريباً')),
+                    );
+                  },
+                ),
               ],
             ),
-          ),
+            
+            // Content
+            SliverToBoxAdapter(
+              child: RefreshIndicator(
+                onRefresh: _refreshData,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    
+                    // Quick Actions
+                    _buildQuickActions(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Popular Departments Section
+                    _buildPopularDepartments(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Upcoming Appointments
+                    _buildUpcomingAppointments(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Health Stats
+                    _buildHealthStats(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Recent Records
+                    _buildRecentRecords(),
+                    
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -118,21 +181,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickActions() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacingLG),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('إجراءات سريعة', style: AppTextStyles.headline3),
-          const SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(AppDimensions.spacingSM),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                ),
+                child: Icon(
+                  Iconsax.flash,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              SizedBox(width: AppDimensions.spacingMD),
+              Text(
+                'إجراءات سريعة',
+                style: AppTextStyles.headline3.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppDimensions.spacingLG),
           Row(
             children: [
               Expanded(
                 child: _buildQuickActionCard(
                   icon: Iconsax.calendar_add,
                   title: 'حجز موعد',
+                  subtitle: 'احجز موعدك الآن',
                   color: AppColors.primary,
+                  gradient: AppColors.gradientPrimary,
                   onTap: () {
-                    // Navigate to departments to book appointment
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -142,50 +228,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: AppDimensions.spacingMD),
               Expanded(
                 child: _buildQuickActionCard(
                   icon: Iconsax.health,
                   title: 'التخصصات',
+                  subtitle: 'استكشف الأقسام',
                   color: AppColors.secondary,
+                  gradient: AppColors.gradientSecondary,
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const DepartmentsScreen(),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildQuickActionCard(
-                  icon: Iconsax.video_circle,
-                  title: 'جلسة افتراضية',
-                  color: AppColors.success,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('الجلسات الافتراضية - قريباً'),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildQuickActionCard(
-                  icon: Iconsax.hospital,
-                  title: 'طوارئ',
-                  color: AppColors.error,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('الطوارئ - قريباً')),
                     );
                   },
                 ),
@@ -200,36 +256,245 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildQuickActionCard({
     required IconData icon,
     required String title,
+    required String subtitle,
     required Color color,
+    required List<Color> gradient,
     required VoidCallback onTap,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.border),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+          child: Padding(
+            padding: EdgeInsets.all(AppDimensions.spacingLG),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(AppDimensions.spacingSM),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 24),
+                ),
+                SizedBox(height: AppDimensions.spacingMD),
+                Text(
+                  title,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPopularDepartments() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacingLG),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(AppDimensions.spacingSM),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                    ),
+                    child: Icon(
+                      Iconsax.health,
+                      color: AppColors.secondary,
+                      size: 20,
+                    ),
+                  ),
+                  SizedBox(width: AppDimensions.spacingMD),
+                  Text(
+                    'الأقسام الشائعة',
+                    style: AppTextStyles.headline3.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DepartmentsScreen(),
+                    ),
+                  );
+                },
+                child: Text(
+                  'عرض الكل',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: AppDimensions.spacingMD),
+        FutureBuilder<List<Department>>(
+          future: _departmentsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return SizedBox(
+                height: 140,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+              return SizedBox(
+                height: 140,
+                child: Center(
+                  child: Text(
+                    'لا توجد أقسام متاحة',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final departments = snapshot.data!.take(6).toList();
+            
+            return SizedBox(
+              height: 140,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacingLG),
+                itemCount: departments.length,
+                itemBuilder: (context, index) {
+                  final department = departments[index];
+                  return _buildDepartmentCard(department, index);
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDepartmentCard(Department department, int index) {
+    final colors = [
+      AppColors.primary,
+      AppColors.secondary,
+      AppColors.accent,
+      AppColors.success,
+      AppColors.info,
+      AppColors.medicalTeal,
+    ];
+    final color = colors[index % colors.length];
+    final logoUrl = department.logoUrl != null && department.logoUrl!.isNotEmpty
+        ? ApiConfig.buildFullUrl(department.logoUrl)
+        : null;
+
+    return Container(
+      width: 120,
+      margin: EdgeInsets.only(left: AppDimensions.spacingMD),
       child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const DepartmentsScreen(),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 70,
+                height: 70,
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 28),
+                child: logoUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          logoUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Iconsax.health,
+                              color: color,
+                              size: 32,
+                            );
+                          },
+                        ),
+                      )
+                    : Icon(
+                        Iconsax.health,
+                        color: color,
+                        size: 32,
+                      ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.bold,
+              SizedBox(height: AppDimensions.spacingSM),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacingXS),
+                child: Text(
+                  department.name,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -241,14 +506,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildUpcomingAppointments() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacingLG),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('المواعيد القادمة', style: AppTextStyles.headline3),
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(AppDimensions.spacingSM),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                    ),
+                    child: Icon(
+                      Iconsax.calendar,
+                      color: AppColors.info,
+                      size: 20,
+                    ),
+                  ),
+                  SizedBox(width: AppDimensions.spacingMD),
+                  Text(
+                    'المواعيد القادمة',
+                    style: AppTextStyles.headline3.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -258,54 +545,50 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                child: const Text('عرض الكل'),
+                child: Text(
+                  'عرض الكل',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppDimensions.spacingMD),
           FutureBuilder<PaginatedAppointments>(
             future: _getUpcomingAppointments(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: AppColors.border),
+                return Container(
+                  padding: EdgeInsets.all(AppDimensions.spacingXL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  child: Center(child: CircularProgressIndicator()),
                 );
               }
 
               if (snapshot.hasError) {
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: AppColors.border),
+                return Container(
+                  padding: EdgeInsets.all(AppDimensions.spacingXL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Iconsax.info_circle,
+                  child: Column(
+                    children: [
+                      Icon(Iconsax.info_circle, color: AppColors.error, size: 32),
+                      SizedBox(height: AppDimensions.spacingMD),
+                      Text(
+                        'حدث خطأ في تحميل المواعيد',
+                        style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.error,
-                          size: 32,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'حدث خطأ في تحميل المواعيد',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.error,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 );
               }
@@ -318,58 +601,59 @@ class _HomeScreenState extends State<HomeScreen> {
               }).toList()..sort((a, b) => a.startAt.compareTo(b.startAt));
 
               if (upcomingAppointments.isEmpty) {
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: AppColors.border),
+                return Container(
+                  padding: EdgeInsets.all(AppDimensions.spacingXL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.border.withOpacity(0.5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Iconsax.calendar,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'لا توجد مواعيد قادمة',
-                                    style: AppTextStyles.bodyLarge.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'احجز موعدك الأول',
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(AppDimensions.spacingLG),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
+                        child: Icon(
+                          Iconsax.calendar,
+                          color: AppColors.primary,
+                          size: 32,
+                        ),
+                      ),
+                      SizedBox(height: AppDimensions.spacingMD),
+                      Text(
+                        'لا توجد مواعيد قادمة',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'احجز موعدك الأول',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      SizedBox(height: AppDimensions.spacingLG),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: AppColors.gradientPrimary,
+                          ),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -377,26 +661,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               );
                             },
-                            child: const Text('احجز موعد'),
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppDimensions.spacingLG,
+                                vertical: AppDimensions.spacingMD,
+                              ),
+                              child: Text(
+                                'احجز موعد',
+                                style: AppTextStyles.button.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               }
 
-              // Show first 3 appointments
-              final displayAppointments = upcomingAppointments.take(3).toList();
+              final displayAppointments = upcomingAppointments.take(2).toList();
 
               return Column(
                 children: [
                   ...displayAppointments.map((appointment) {
                     return _buildAppointmentCard(appointment);
                   }),
-                  if (upcomingAppointments.length > 3)
+                  if (upcomingAppointments.length > 2)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: EdgeInsets.only(top: AppDimensions.spacingMD),
                       child: Center(
                         child: TextButton(
                           onPressed: () {
@@ -408,9 +703,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                           child: Text(
-                            'عرض ${upcomingAppointments.length - 3} موعد إضافي',
+                            'عرض ${upcomingAppointments.length - 2} موعد إضافي',
                             style: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -469,109 +765,129 @@ class _HomeScreenState extends State<HomeScreen> {
       statusColor = AppColors.warning;
       statusText = 'قيد الانتظار';
     } else if (appointment.status == 'CONFIRMED') {
-      statusColor = AppColors.info;
+      statusColor = AppColors.success;
       statusText = 'مؤكد';
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Iconsax.calendar_tick,
-                  color: statusColor,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (knownDoctorName != null && knownDoctorName.isNotEmpty)
-                      Text(
-                        'د. $knownDoctorName',
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    else
-                      FutureBuilder<String?>(
-                        future: _getDoctorName(appointment.doctorId),
-                        builder: (context, snapshot) {
-                          final name = snapshot.data;
-                          return Text(
-                            'د. ${name != null && name.isNotEmpty ? name : 'طبيب غير محدد'}',
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        },
-                      ),
-                    const SizedBox(height: 4),
-                    Text(
-                      serviceName,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Iconsax.calendar,
-                          size: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(dateStr, style: AppTextStyles.bodySmall),
-                        const SizedBox(width: 16),
-                        Icon(
-                          Iconsax.clock,
-                          size: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(timeStr, style: AppTextStyles.bodySmall),
+    return Container(
+      margin: EdgeInsets.only(bottom: AppDimensions.spacingMD),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.border.withOpacity(0.5),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
+            );
+          },
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+          child: Padding(
+            padding: EdgeInsets.all(AppDimensions.spacingLG),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        statusColor,
+                        statusColor.withOpacity(0.7),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  statusText,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.bold,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                  ),
+                  child: Icon(
+                    Iconsax.calendar_tick,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
-              ),
-            ],
+                SizedBox(width: AppDimensions.spacingMD),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (knownDoctorName != null && knownDoctorName.isNotEmpty)
+                        Text(
+                          'د. $knownDoctorName',
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      else
+                        FutureBuilder<String?>(
+                          future: _getDoctorName(appointment.doctorId),
+                          builder: (context, snapshot) {
+                            final name = snapshot.data;
+                            return Text(
+                              'د. ${name != null && name.isNotEmpty ? name : 'طبيب غير محدد'}',
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          },
+                        ),
+                      SizedBox(height: 4),
+                      Text(
+                        serviceName,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Iconsax.calendar,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          SizedBox(width: 4),
+                          Text(dateStr, style: AppTextStyles.bodySmall),
+                          SizedBox(width: 16),
+                          Icon(
+                            Iconsax.clock,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          SizedBox(width: 4),
+                          Text(timeStr, style: AppTextStyles.bodySmall),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppDimensions.spacingSM,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -580,12 +896,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHealthStats() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacingLG),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('إحصائيات صحية', style: AppTextStyles.headline3),
-          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(AppDimensions.spacingSM),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                ),
+                child: Icon(
+                  Iconsax.chart,
+                  color: AppColors.success,
+                  size: 20,
+                ),
+              ),
+              SizedBox(width: AppDimensions.spacingMD),
+              Text(
+                'إحصائيات صحية',
+                style: AppTextStyles.headline3.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppDimensions.spacingMD),
           FutureBuilder<Map<String, dynamic>>(
             future: _getHealthStats(),
             builder: (context, snapshot) {
@@ -599,57 +937,65 @@ class _HomeScreenState extends State<HomeScreen> {
                 sessionsCount = snapshot.data!['sessions'] ?? 0;
               }
 
-              return Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: AppColors.border),
+              return Container(
+                padding: EdgeInsets.all(AppDimensions.spacingLG),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white,
+                      AppColors.backgroundLight,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.border.withOpacity(0.5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: snapshot.connectionState == ConnectionState.waiting
-                    ? const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatItem(
-                                'المواعيد',
-                                appointmentsCount.toString(),
-                                Iconsax.calendar,
-                                AppColors.primary,
-                              ),
+                    ? Center(child: CircularProgressIndicator())
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatItem(
+                              'المواعيد',
+                              appointmentsCount.toString(),
+                              Iconsax.calendar,
+                              AppColors.primary,
                             ),
-                            Container(
-                              width: 1,
-                              height: 40,
-                              color: AppColors.border,
+                          ),
+                          Container(
+                            width: 1,
+                            height: 50,
+                            color: AppColors.border,
+                          ),
+                          Expanded(
+                            child: _buildStatItem(
+                              'السجلات',
+                              recordsCount.toString(),
+                              Iconsax.health,
+                              AppColors.secondary,
                             ),
-                            Expanded(
-                              child: _buildStatItem(
-                                'السجلات',
-                                recordsCount.toString(),
-                                Iconsax.health,
-                                AppColors.secondary,
-                              ),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 50,
+                            color: AppColors.border,
+                          ),
+                          Expanded(
+                            child: _buildStatItem(
+                              'الجلسات',
+                              sessionsCount.toString(),
+                              Iconsax.video_circle,
+                              AppColors.success,
                             ),
-                            Container(
-                              width: 1,
-                              height: 40,
-                              color: AppColors.border,
-                            ),
-                            Expanded(
-                              child: _buildStatItem(
-                                'الجلسات',
-                                sessionsCount.toString(),
-                                Iconsax.video_circle,
-                                AppColors.success,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
               );
             },
@@ -666,14 +1012,12 @@ class _HomeScreenState extends State<HomeScreen> {
         return {'appointments': 0, 'records': 0, 'sessions': 0};
       }
 
-      // Get appointments count
       final appointments = await _apiService.getPatientAppointments(
         status: null,
         token: token,
         limit: 100,
       );
 
-      // Get medical records count
       final records = await _apiService.getPatientMedicalRecords(
         token: token,
         limit: 100,
@@ -682,7 +1026,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return {
         'appointments': appointments.total,
         'records': records.total,
-        'sessions': 0, // TODO: Add sessions count when API is available
+        'sessions': 0,
       };
     } catch (e) {
       return {'appointments': 0, 'records': 0, 'sessions': 0};
@@ -697,9 +1041,23 @@ class _HomeScreenState extends State<HomeScreen> {
   ) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 8),
-        Text(value, style: AppTextStyles.headline3),
+        Container(
+          padding: EdgeInsets.all(AppDimensions.spacingSM),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        SizedBox(height: AppDimensions.spacingSM),
+        Text(
+          value,
+          style: AppTextStyles.headline2.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 4),
         Text(
           title,
           style: AppTextStyles.bodySmall.copyWith(
@@ -712,14 +1070,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRecentRecords() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacingLG),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('السجلات الطبية الأخيرة', style: AppTextStyles.headline3),
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(AppDimensions.spacingSM),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                    ),
+                    child: Icon(
+                      Iconsax.document_text,
+                      color: AppColors.secondary,
+                      size: 20,
+                    ),
+                  ),
+                  SizedBox(width: AppDimensions.spacingMD),
+                  Text(
+                    'السجلات الطبية الأخيرة',
+                    style: AppTextStyles.headline3.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
               TextButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -731,104 +1111,113 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                child: const Text('عرض الكل'),
+                child: Text(
+                  'عرض الكل',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppDimensions.spacingMD),
           FutureBuilder<PaginatedMedicalRecords>(
             future: _getRecentRecords(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                return Container(
+                  padding: EdgeInsets.all(AppDimensions.spacingXL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  child: Center(child: CircularProgressIndicator()),
                 );
               }
 
               if (snapshot.hasError) {
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                return Container(
+                  padding: EdgeInsets.all(AppDimensions.spacingXL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Iconsax.info_circle,
-                          size: 48,
+                  child: Column(
+                    children: [
+                      Icon(Iconsax.info_circle, color: AppColors.error, size: 32),
+                      SizedBox(height: AppDimensions.spacingMD),
+                      Text(
+                        'حدث خطأ في تحميل السجلات',
+                        style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.error,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'حدث خطأ في تحميل السجلات',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.error,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 );
               }
 
               final records = snapshot.data?.records ?? [];
               if (records.isEmpty) {
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                return Container(
+                  padding: EdgeInsets.all(AppDimensions.spacingXL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.border.withOpacity(0.5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      children: [
-                        Icon(
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(AppDimensions.spacingLG),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
                           Iconsax.health,
-                          size: 48,
+                          size: 32,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                      SizedBox(height: AppDimensions.spacingMD),
+                      Text(
+                        'لا توجد سجلات طبية',
+                        style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.textSecondary,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'لا توجد سجلات طبية',
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'ستظهر السجلات هنا بعد زياراتك الطبية',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'ستظهر السجلات هنا بعد زياراتك الطبية',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 );
               }
 
-              // Show first 3 records
-              final displayRecords = records.take(3).toList();
+              final displayRecords = records.take(2).toList();
 
               return Column(
                 children: [
                   ...displayRecords.map((record) {
                     return _buildRecordCard(record);
                   }),
-                  if (records.length > 3)
+                  if (records.length > 2)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: EdgeInsets.only(top: AppDimensions.spacingMD),
                       child: Center(
                         child: TextButton(
                           onPressed: () {
@@ -842,9 +1231,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                           child: Text(
-                            'عرض ${records.length - 3} سجل إضافي',
+                            'عرض ${records.length - 2} سجل إضافي',
                             style: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -875,7 +1265,6 @@ class _HomeScreenState extends State<HomeScreen> {
         token: token,
         limit: 100,
       );
-      // Sort by date, newest first
       final sortedRecords = result.records.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return PaginatedMedicalRecords(
@@ -901,78 +1290,95 @@ class _HomeScreenState extends State<HomeScreen> {
     final dateStr =
         '${record.createdAt.day}/${record.createdAt.month}/${record.createdAt.year}';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('تفاصيل السجل - ${record.diagnosis}'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Iconsax.health,
-                  color: AppColors.secondary,
-                  size: 28,
-                ),
+    return Container(
+      margin: EdgeInsets.only(bottom: AppDimensions.spacingMD),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.border.withOpacity(0.5),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('تفاصيل السجل - ${record.diagnosis}'),
+                behavior: SnackBarBehavior.floating,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      record.diagnosis,
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'د. $doctorName',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Iconsax.calendar,
-                          size: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(dateStr, style: AppTextStyles.bodySmall),
+            );
+          },
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+          child: Padding(
+            padding: EdgeInsets.all(AppDimensions.spacingLG),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.secondary,
+                        AppColors.secondary.withOpacity(0.7),
                       ],
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                  ),
+                  child: Icon(
+                    Iconsax.health,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
-              ),
-              const Icon(
-                Iconsax.arrow_left_2,
-                color: AppColors.textSecondary,
-                size: 20,
-              ),
-            ],
+                SizedBox(width: AppDimensions.spacingMD),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        record.diagnosis,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'د. $doctorName',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Iconsax.calendar,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          SizedBox(width: 4),
+                          Text(dateStr, style: AppTextStyles.bodySmall),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Iconsax.arrow_left_2,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
+              ],
+            ),
           ),
         ),
       ),

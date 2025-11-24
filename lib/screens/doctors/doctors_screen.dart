@@ -110,20 +110,26 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
   Widget _buildDoctorCard(Doctor doctor) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(28),
         gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
           colors: [
             Colors.white,
-            Colors.grey.shade50,
+            AppColors.backgroundLight.withOpacity(0.5),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withOpacity(0.15),
+            blurRadius: 25,
+            offset: const Offset(0, 10),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 15,
             offset: const Offset(0, 5),
             spreadRadius: 0,
@@ -148,293 +154,386 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               Navigator.pop(context, result);
             }
           },
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    // Avatar with Enhanced Design
-                    Hero(
-                      tag: 'doctor-${doctor.id}',
-                      child: Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: doctor.avatar != null && doctor.avatar!.isNotEmpty
-                              ? null
-                              : const LinearGradient(
-                                  colors: AppColors.gradientPrimary,
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                          image: doctor.avatar != null && doctor.avatar!.isNotEmpty
-                              ? DecorationImage(
-                                  image: NetworkImage(doctor.avatar!),
-                                  fit: BoxFit.cover,
-                                  onError: (_, __) {},
-                                )
-                              : null,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: doctor.avatar == null || doctor.avatar!.isEmpty
-                            ? Center(
-                                child: Text(
-                                  doctor.name.isNotEmpty
-                                      ? doctor.name[0].toUpperCase()
-                                      : 'د',
-                                  style: const TextStyle(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              )
-                            : null,
-                      ),
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            children: [
+              // Decorative gradient overlay
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(28),
                     ),
-                    const SizedBox(width: 16),
-                    // Doctor Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        AppColors.primary.withOpacity(0.08),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Section with Avatar and Info
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Modern Avatar Design
+                        Hero(
+                          tag: 'doctor-${doctor.id}',
+                          child: Stack(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  doctor.name,
-                                  style: AppTextStyles.bodyLarge.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
+                                width: 110,
+                                height: 110,
                                 decoration: BoxDecoration(
-                                  color: AppColors.success.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Iconsax.verify,
-                                      size: 12,
-                                      color: AppColors.success,
+                                  shape: BoxShape.circle,
+                                  gradient: doctor.avatar != null && doctor.avatar!.isNotEmpty
+                                      ? null
+                                      : const LinearGradient(
+                                          colors: AppColors.gradientPrimary,
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                  image: doctor.avatar != null && doctor.avatar!.isNotEmpty
+                                      ? DecorationImage(
+                                          image: NetworkImage(doctor.avatar!),
+                                          fit: BoxFit.cover,
+                                          onError: (_, __) {},
+                                        )
+                                      : null,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withOpacity(0.4),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'معتمد',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.success,
-                                      ),
+                                    BoxShadow(
+                                      color: Colors.white,
+                                      blurRadius: 0,
+                                      offset: const Offset(0, 0),
+                                      spreadRadius: 3,
                                     ),
                                   ],
+                                ),
+                                child: doctor.avatar == null || doctor.avatar!.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          doctor.name.isNotEmpty
+                                              ? doctor.name[0].toUpperCase()
+                                              : 'د',
+                                          style: AppTextStyles.headline1.copyWith(
+                                            fontSize: 42,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              // Verified badge on avatar
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.success.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          AppColors.success,
+                                          AppColors.success.withOpacity(0.8),
+                                        ],
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Iconsax.verify,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          if (doctor.departmentName != null) ...[
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Icon(
-                                    Iconsax.health,
-                                    size: 14,
-                                    color: AppColors.primary,
-                                  ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Doctor Info Section
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Doctor Name
+                              Text(
+                                doctor.name,
+                                style: AppTextStyles.headline2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: AppColors.textPrimary,
+                                  height: 1.2,
                                 ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    doctor.departmentName!,
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      fontSize: 13,
-                                      color: AppColors.textSecondary,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              // Department Badge
+                              if (doctor.departmentName != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppColors.primary.withOpacity(0.15),
+                                        AppColors.primary.withOpacity(0.08),
+                                      ],
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.primary.withOpacity(0.3),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Icon(
+                                          Iconsax.hospital,
+                                          size: 14,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          doctor.departmentName!,
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            fontSize: 13,
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                          if (doctor.yearsOfExperience != null) ...[
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
+                              // Experience Badge
+                              if (doctor.yearsOfExperience != null) ...[
+                                const SizedBox(height: 10),
                                 Container(
-                                  padding: const EdgeInsets.all(4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.accent.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppColors.accent.withOpacity(0.15),
+                                        AppColors.accent.withOpacity(0.08),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.accent.withOpacity(0.3),
+                                      width: 1.5,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    Iconsax.award,
-                                    size: 14,
-                                    color: AppColors.accent,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '${doctor.yearsOfExperience} سنوات خبرة',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accent.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Icon(
+                                          Iconsax.award,
+                                          size: 14,
+                                          color: AppColors.accent,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${doctor.yearsOfExperience} سنوات خبرة',
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          fontSize: 13,
+                                          color: AppColors.accent,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
-                            ),
-                          ],
-                        ],
-                      ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                if (doctor.bio != null && doctor.bio!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.border.withOpacity(0.5),
-                      ),
-                    ),
-                    child: Text(
-                      doctor.bio!,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                // Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 44,
+                    // Bio Section
+                    if (doctor.bio != null && doctor.bio!.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: AppColors.gradientPrimary,
+                          gradient: LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: [
+                              AppColors.background,
+                              AppColors.backgroundLight,
+                            ],
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => DoctorDetailsScreen(
-                                    doctorId: doctor.id,
-                                    serviceId: widget.serviceId,
-                                    serviceName: widget.serviceName,
-                                  ),
-                                ),
-                              );
-                              if (result != null && result is Map<String, dynamic> && mounted) {
-                                Navigator.pop(context, result);
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Iconsax.eye,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'عرض التفاصيل',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.border.withOpacity(0.2),
+                            width: 1,
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      height: 44,
-                      width: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Iconsax.arrow_left_2,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DoctorDetailsScreen(
-                                doctorId: doctor.id,
-                                serviceId: widget.serviceId,
-                                serviceName: widget.serviceName,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Iconsax.document_text,
+                                size: 18,
+                                color: AppColors.primary,
                               ),
                             ),
-                          );
-                          if (result != null && result is Map<String, dynamic> && mounted) {
-                            Navigator.pop(context, result);
-                          }
-                        },
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                doctor.bio!,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                  height: 1.6,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    // Action Button
+                    Container(
+                      width: double.infinity,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: AppColors.gradientPrimary,
+                          begin: Alignment.centerRight,
+                          end: Alignment.centerLeft,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.5),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DoctorDetailsScreen(
+                                  doctorId: doctor.id,
+                                  serviceId: widget.serviceId,
+                                  serviceName: widget.serviceName,
+                                ),
+                              ),
+                            );
+                            if (result != null && result is Map<String, dynamic> && mounted) {
+                              Navigator.pop(context, result);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Iconsax.eye,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'عرض التفاصيل والحجز',
+                                style: AppTextStyles.button.copyWith(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Iconsax.arrow_left_2,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -591,124 +690,278 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: Text(title),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        body: Column(
-          children: [
-            // Search bar
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'ابحث عن طبيب...',
-                  hintStyle: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  prefixIcon: const Icon(
-                    Iconsax.search_normal_1,
-                    color: AppColors.primary,
-                  ),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(
-                            Iconsax.close_circle,
-                            color: AppColors.textSecondary,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _searchQuery = '';
-                              _searchController.clear();
-                            });
-                            _filterDoctors();
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: AppColors.background,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: AppColors.primary,
-                      width: 2,
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            return [
+              SliverAppBar(
+                expandedHeight: 180,
+                floating: false,
+                pinned: true,
+                elevation: 0,
+                backgroundColor: AppColors.primary,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: Text(
+                    title,
+                    style: AppTextStyles.headline3.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                  _filterDoctors();
-                },
-              ),
-            ),
-            // Doctors list
-            Expanded(
-              child: _isLoading
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(
-                            'جاري تحميل الأطباء...',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
+                  centerTitle: true,
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: AppColors.gradientPrimary,
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: -30,
+                          right: -30,
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.1),
                             ),
                           ),
-                        ],
+                        ),
+                        Positioned(
+                          bottom: -20,
+                          left: -20,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.08),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ];
+          },
+          body: Column(
+            children: [
+              // Modern Search bar
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'ابحث عن طبيب...',
+                    hintStyle: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    prefixIcon: Container(
+                      margin: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    )
-                  : _errorMessage != null
-                      ? _buildErrorState()
-                      : _filteredDoctors.isEmpty
-                          ? _buildEmptyState()
-                          : RefreshIndicator(
-                              onRefresh: _loadDoctors,
-                              color: AppColors.primary,
-                              child: ListView.builder(
-                                padding: const EdgeInsets.all(16),
-                                itemCount: _filteredDoctors.length,
-                                physics: const BouncingScrollPhysics(),
-                                itemBuilder: (context, index) {
-                                  return TweenAnimationBuilder<double>(
-                                    tween: Tween(begin: 0.0, end: 1.0),
-                                    duration: Duration(milliseconds: 300 + (index * 50)),
-                                    curve: Curves.easeOutCubic,
-                                    builder: (context, value, child) {
-                                      return Transform.translate(
-                                        offset: Offset(0, 20 * (1 - value)),
-                                        child: Opacity(
-                                          opacity: value,
-                                          child: child,
-                                        ),
-                                      );
-                                    },
-                                    child: _buildDoctorCard(_filteredDoctors[index]),
-                                  );
-                                },
+                      child: const Icon(
+                        Iconsax.search_normal_1,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Iconsax.close_circle,
+                                color: AppColors.error,
+                                size: 18,
                               ),
                             ),
-            ),
-          ],
+                            onPressed: () {
+                              setState(() {
+                                _searchQuery = '';
+                                _searchController.clear();
+                              });
+                              _filterDoctors();
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                        color: AppColors.border.withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 18,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                    _filterDoctors();
+                  },
+                ),
+              ),
+              // Results count badge
+              if (_searchQuery.isNotEmpty && _filteredDoctors.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary.withOpacity(0.15),
+                              AppColors.primary.withOpacity(0.08),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Iconsax.filter,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${_filteredDoctors.length} نتيجة',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              // Doctors list
+              Expanded(
+                child: _isLoading
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.primary.withOpacity(0.1),
+                                    AppColors.primary.withOpacity(0.05),
+                                  ],
+                                ),
+                              ),
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.primary,
+                                ),
+                                strokeWidth: 3,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'جاري تحميل الأطباء...',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _errorMessage != null
+                        ? _buildErrorState()
+                        : _filteredDoctors.isEmpty
+                            ? _buildEmptyState()
+                            : RefreshIndicator(
+                                onRefresh: _loadDoctors,
+                                color: AppColors.primary,
+                                child: ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: _filteredDoctors.length,
+                                  physics: const BouncingScrollPhysics(),
+                                  itemBuilder: (context, index) {
+                                    return TweenAnimationBuilder<double>(
+                                      tween: Tween(begin: 0.0, end: 1.0),
+                                      duration: Duration(milliseconds: 300 + (index * 50)),
+                                      curve: Curves.easeOutCubic,
+                                      builder: (context, value, child) {
+                                        final clampedValue = value.clamp(0.0, 1.0);
+                                        return Transform.translate(
+                                          offset: Offset(0, 20 * (1 - clampedValue)),
+                                          child: Opacity(
+                                            opacity: clampedValue,
+                                            child: child,
+                                          ),
+                                        );
+                                      },
+                                      child: _buildDoctorCard(_filteredDoctors[index]),
+                                    );
+                                  },
+                                ),
+                              ),
+              ),
+            ],
+          ),
         ),
       ),
     );

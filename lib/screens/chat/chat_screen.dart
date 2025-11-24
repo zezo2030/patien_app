@@ -204,17 +204,15 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               Text(
                 _otherUserName ?? 'المحادثة',
-                style: const TextStyle(
+                style: AppTextStyles.headline3.copyWith(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
                 ),
               ),
               if (_session != null)
                 Text(
                   _session!.status == 'active' ? 'متصل' : 'غير متصل',
-                  style: const TextStyle(
+                  style: AppTextStyles.caption.copyWith(
                     fontSize: 12,
-                    fontWeight: FontWeight.normal,
                   ),
                 ),
             ],
@@ -404,9 +402,8 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Center(
                 child: Text(
                   senderName.isNotEmpty ? senderName[0].toUpperCase() : '؟',
-                  style: const TextStyle(
+                  style: AppTextStyles.bodyLarge.copyWith(
                     color: Colors.white,
-                    fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
                 ),
@@ -448,9 +445,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
                         senderName,
-                        style: TextStyle(
+                        style: AppTextStyles.caption.copyWith(
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
                           color: isCurrentUser
                               ? Colors.white.withOpacity(0.9)
                               : AppColors.textSecondary,
@@ -459,7 +455,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   Text(
                     message.content,
-                    style: TextStyle(
+                    style: AppTextStyles.bodyMedium.copyWith(
                       fontSize: 14,
                       color: isCurrentUser
                           ? Colors.white
@@ -472,7 +468,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Text(
                         _formatTime(message.createdAt),
-                        style: TextStyle(
+                        style: AppTextStyles.caption.copyWith(
                           fontSize: 11,
                           color: isCurrentUser
                               ? Colors.white.withOpacity(0.7)
@@ -513,9 +509,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   _currentUserName?.isNotEmpty == true
                       ? _currentUserName![0].toUpperCase()
                       : 'أ',
-                  style: const TextStyle(
+                  style: AppTextStyles.bodyLarge.copyWith(
                     color: Colors.white,
-                    fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
                 ),

@@ -7,6 +7,7 @@ import 'config/api_config.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main/main_screen.dart';
 import 'screens/doctor/doctor_main_screen.dart';
+import 'screens/medical_records/medical_records_screen.dart';
 import 'models/user.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
@@ -14,16 +15,14 @@ import 'services/notification_service.dart';
 void main() async {
   // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   // Initialize Notification Service
   final notificationService = NotificationService();
   await notificationService.initialize();
-  
+
   // Print API configuration for debugging
   ApiConfig.printConfig();
 
@@ -51,6 +50,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const MainScreen(),
         '/doctor-dashboard': (context) => const DoctorMainScreen(),
+        '/medical-records': (context) => const MedicalRecordsScreen(),
       },
     );
   }

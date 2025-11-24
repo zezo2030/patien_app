@@ -10,6 +10,7 @@ class AppInputField extends StatelessWidget {
   final bool obscureText;
   final TextInputType keyboardType;
   final IconData? icon;
+  final Widget? suffixIcon;
   final String? errorText;
   final ValueChanged<String>? onChanged;
   final TextInputAction? textInputAction;
@@ -23,6 +24,7 @@ class AppInputField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.icon,
+    this.suffixIcon,
     this.errorText,
     this.onChanged,
     this.textInputAction,
@@ -66,6 +68,7 @@ class AppInputField extends StatelessWidget {
               prefixIcon: icon != null
                   ? Icon(icon, color: AppColors.textSecondary)
                   : null,
+              suffixIcon: suffixIcon,
               border: InputBorder.none,
               contentPadding: EdgeInsets.all(AppDimensions.spacingMD),
             ),

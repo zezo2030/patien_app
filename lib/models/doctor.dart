@@ -8,7 +8,6 @@ class Doctor {
   final String? departmentId;
   final String? departmentName;
   final String? bio;
-  final List<String>? photos;
   final String status; // APPROVED, PENDING, SUSPENDED
   final List<DoctorService>? services;
   final String? avatar;
@@ -21,7 +20,6 @@ class Doctor {
     this.departmentId,
     this.departmentName,
     this.bio,
-    this.photos,
     required this.status,
     this.services,
     this.avatar,
@@ -43,22 +41,6 @@ class Doctor {
     }
     
     departmentName ??= json['departmentName'];
-
-    // معالجة photos - تحويل المسارات النسبية إلى URLs كاملة
-    List<String>? photos;
-    if (json['photos'] != null && json['photos'] is List) {
-      photos = (json['photos'] as List)
-          .map((photo) {
-            final photoStr = photo?.toString() ?? '';
-            if (photoStr.isNotEmpty) {
-              return ApiConfig.buildFullUrl(photoStr);
-            }
-            return photoStr;
-          })
-          .where((photo) => photo.isNotEmpty)
-          .toList();
-      if (photos.isEmpty) photos = null;
-    }
 
     // معالجة avatar - تحويل المسار النسبي إلى URL كامل
     String? avatar = json['avatar'];
@@ -82,7 +64,6 @@ class Doctor {
       departmentId: departmentId,
       departmentName: departmentName,
       bio: json['bio'],
-      photos: photos,
       status: json['status'] ?? 'APPROVED',
       services: services,
       avatar: avatar,
@@ -98,7 +79,6 @@ class Doctor {
       'departmentId': departmentId,
       'departmentName': departmentName,
       'bio': bio,
-      'photos': photos,
       'status': status,
       'services': services?.map((s) => s.toJson()).toList(),
       'avatar': avatar,

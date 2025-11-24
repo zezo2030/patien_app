@@ -85,11 +85,10 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                           child: ElevatedButton.icon(
                             onPressed: _createDefaultSchedule,
                             icon: const Icon(Iconsax.add_circle, size: 22),
-                            label: const Text(
+                            label: Text(
                               'إنشاء جدول افتراضي',
-                              style: TextStyle(
+                              style: AppTextStyles.button.copyWith(
                                 fontSize: 16,
-                                fontWeight: FontWeight.bold,
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
@@ -261,13 +260,12 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'جدول العمل الأسبوعي',
-                    style: TextStyle(
+                    style: AppTextStyles.headline3.copyWith(
                       color: Colors.white,
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -279,7 +277,7 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                   ),
                   child: Text(
                     '${weekly.length} أيام',
-                    style: const TextStyle(
+                    style: AppTextStyles.bodyMedium.copyWith(
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -371,10 +369,9 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                             ),
                             child: Text(
                               '${slots.length} فترة',
-                              style: const TextStyle(
+                              style: AppTextStyles.caption.copyWith(
                                 color: Colors.white,
                                 fontSize: 11,
-                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           )
@@ -579,10 +576,9 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                               ),
                               child: Text(
                                 '${day.slots.length}',
-                                style: TextStyle(
+                                style: AppTextStyles.caption.copyWith(
                                   color: AppColors.primary,
                                   fontSize: 12,
-                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
@@ -785,11 +781,10 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
       child: ElevatedButton.icon(
         onPressed: _saveSchedule,
         icon: const Icon(Iconsax.tick_circle, size: 22),
-        label: const Text(
+        label: Text(
           'حفظ الجدول',
-          style: TextStyle(
+          style: AppTextStyles.button.copyWith(
             fontSize: 16,
-            fontWeight: FontWeight.bold,
           ),
         ),
         style: ElevatedButton.styleFrom(

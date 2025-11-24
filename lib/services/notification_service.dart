@@ -10,6 +10,11 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('📱 Background message received: ${message.messageId}');
   print('📱 Title: ${message.notification?.title}');
   print('📱 Body: ${message.notification?.body}');
+  print('📱 Data: ${message.data}');
+  
+  // إظهار إشعار محلي عند استقبال رسالة في الخلفية
+  // Note: Firebase automatically shows notification when app is in background/terminated
+  // This handler is mainly for logging and data processing
 }
 
 class NotificationService {

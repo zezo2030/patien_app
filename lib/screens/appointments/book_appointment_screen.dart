@@ -349,7 +349,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   Widget _buildTypeSelector() {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           colors: [
             Colors.white,
@@ -360,14 +360,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: AppColors.primary.withOpacity(0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -390,9 +390,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                 const SizedBox(width: 12),
                 Text(
                   'نوع الموعد',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
+                  style: AppTextStyles.cardTitle.copyWith(
+                    fontSize: 18,
                   ),
                 ),
               ],
@@ -442,59 +441,73 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           _selectedType = type;
         });
       },
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
         decoration: BoxDecoration(
           gradient: isSelected
               ? LinearGradient(
                   colors: [
-                    color.withOpacity(0.15),
-                    color.withOpacity(0.08),
+                    color.withOpacity(0.18),
+                    color.withOpacity(0.1),
                   ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 )
               : null,
-          color: isSelected ? null : AppColors.background,
+          color: isSelected ? null : Colors.white,
           border: Border.all(
-            color: isSelected ? color : AppColors.border.withOpacity(0.3),
-            width: isSelected ? 2 : 1,
+            color: isSelected ? color : AppColors.border.withOpacity(0.4),
+            width: isSelected ? 2.5 : 1.5,
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: color.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    color: color.withOpacity(0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+                color: isSelected ? color.withOpacity(0.2) : AppColors.background,
                 shape: BoxShape.circle,
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: color.withOpacity(0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Icon(
                 icon,
                 color: isSelected ? color : AppColors.textSecondary,
-                size: 24,
+                size: 26,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: AppTextStyles.bodySmall.copyWith(
+              style: AppTextStyles.titleSmall.copyWith(
                 color: isSelected ? color : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 11,
+                fontSize: 12,
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -508,7 +521,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   Widget _buildDateSelector() {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           colors: [
             Colors.white,
@@ -519,14 +532,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: AppColors.primary.withOpacity(0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -549,9 +562,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                 const SizedBox(width: 12),
                 Text(
                   'التاريخ',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
+                  style: AppTextStyles.cardTitle.copyWith(
+                    fontSize: 18,
                   ),
                 ),
               ],
@@ -559,17 +571,19 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             const SizedBox(height: 16),
             Container(
               width: double.infinity,
-              height: 54,
+              height: 58,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: AppColors.gradientPrimary,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: AppColors.primary.withOpacity(0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
@@ -596,14 +610,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   _loadAvailability();
                 }
               },
-                icon: const Icon(Iconsax.calendar_1, size: 22),
+                icon: const Icon(Iconsax.calendar_1, size: 24),
                 label: Text(
                   _selectedDate != null
                       ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
                       : 'اختر التاريخ',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  style: AppTextStyles.buttonLarge.copyWith(
+                    fontSize: 17,
+                    color: Colors.white,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -611,7 +625,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   foregroundColor: Colors.white,
                   shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 0,
                 ),
@@ -644,7 +658,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -670,9 +684,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                 const SizedBox(width: 12),
                 Text(
                   'اختر وقتاً من الفتحات المتاحة',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
+                  style: AppTextStyles.cardTitle.copyWith(
+                    fontSize: 18,
                   ),
                 ),
               ],
@@ -747,15 +760,22 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('حجز موعد جديد'),
+          title: Text(
+            'حجز موعد جديد',
+            style: AppTextStyles.titleMedium.copyWith(
+              color: Colors.white,
+              fontSize: 20,
+            ),
+          ),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
+          centerTitle: true,
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -910,7 +930,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 20),
                             ],
                             Row(
                               children: [
@@ -970,9 +990,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                         widget.doctorName != null
                                             ? 'د. ${widget.doctorName}'
                                             : 'طبيب غير محدد',
-                                        style: AppTextStyles.bodyLarge.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 17,
+                                        style: AppTextStyles.titleMedium.copyWith(
+                                          fontSize: 18,
                                           color: widget.doctorId.isEmpty
                                               ? AppColors.error
                                               : AppColors.textPrimary,
@@ -1093,7 +1112,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     // Type Selector
                     TweenAnimationBuilder<double>(
@@ -1111,7 +1130,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       },
                       child: _buildTypeSelector(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     // Date Selector
                     TweenAnimationBuilder<double>(
@@ -1129,7 +1148,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       },
                       child: _buildDateSelector(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     // Time Selector
                     TweenAnimationBuilder<double>(
@@ -1207,7 +1226,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         ),
                       ),
                     ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                     ],
 
                     // Book Buttons
@@ -1229,23 +1248,25 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                           },
                           child: Container(
                           width: double.infinity,
-                          height: 60,
+                          height: 64,
                           decoration: BoxDecoration(
                             gradient: widget.doctorId.isEmpty || _isLoading || _selectedSlotStartAt == null
                                 ? null
                                 : const LinearGradient(
                                     colors: AppColors.gradientPrimary,
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
                             color: widget.doctorId.isEmpty || _isLoading || _selectedSlotStartAt == null
                                 ? AppColors.textSecondary.withOpacity(0.5)
                                 : null,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(18),
                             boxShadow: widget.doctorId.isEmpty || _isLoading || _selectedSlotStartAt == null
                                 ? null
                                 : [
                                     BoxShadow(
-                                      color: AppColors.primary.withOpacity(0.4),
-                                      blurRadius: 15,
+                                      color: AppColors.primary.withOpacity(0.45),
+                                      blurRadius: 18,
                                       offset: const Offset(0, 8),
                                     ),
                                   ],
@@ -1256,14 +1277,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                 : _bookAppointment,
                             icon: _isLoading
                                 ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
+                                    width: 24,
+                                    height: 24,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
+                                      strokeWidth: 3,
                                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
                                   )
-                                : const Icon(Iconsax.calendar_add, size: 24),
+                                : const Icon(Iconsax.calendar_add, size: 26),
                             label: Text(
                               _isLoading
                                   ? 'جاري الحجز...'
@@ -1272,9 +1293,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                       : _selectedSlotStartAt == null
                                           ? 'اختر وقتاً متاحاً'
                                           : 'حجز الموعد',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                              style: AppTextStyles.buttonLarge.copyWith(
+                                fontSize: 19,
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
@@ -1284,7 +1304,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               disabledForegroundColor: Colors.white.withOpacity(0.7),
                               shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(18),
                               ),
                               elevation: 0,
                             ),
@@ -1342,26 +1362,28 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                           const SizedBox(height: 12),
                           Container(
                             width: double.infinity,
-                            height: 60,
+                            height: 64,
                             decoration: BoxDecoration(
                               gradient: widget.doctorId.isEmpty || _isLoading || _selectedSlotStartAt == null
                                   ? null
                                   : LinearGradient(
                                       colors: [
                                         AppColors.success,
-                                        AppColors.success.withOpacity(0.8),
+                                        AppColors.success.withOpacity(0.85),
                                       ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
                               color: widget.doctorId.isEmpty || _isLoading || _selectedSlotStartAt == null
                                   ? AppColors.textSecondary.withOpacity(0.5)
                                   : null,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(18),
                               boxShadow: widget.doctorId.isEmpty || _isLoading || _selectedSlotStartAt == null
                                   ? null
                                   : [
                                       BoxShadow(
-                                        color: AppColors.success.withOpacity(0.4),
-                                        blurRadius: 15,
+                                        color: AppColors.success.withOpacity(0.45),
+                                        blurRadius: 18,
                                         offset: const Offset(0, 8),
                                       ),
                                     ],
@@ -1372,14 +1394,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                   : _bookConfirmedAppointment,
                               icon: _isLoading
                                   ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
+                                      width: 24,
+                                      height: 24,
                                       child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
+                                        strokeWidth: 3,
                                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                       ),
                                     )
-                                  : const Icon(Iconsax.tick_circle, size: 24),
+                                  : const Icon(Iconsax.tick_circle, size: 26),
                               label: Text(
                                 _isLoading
                                     ? 'جاري الحجز والتأكيد...'
@@ -1388,9 +1410,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                         : _selectedSlotStartAt == null
                                             ? 'اختر وقتاً متاحاً'
                                             : 'حجز مؤكد للاختبار ✓',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                style: AppTextStyles.buttonLarge.copyWith(
+                                  fontSize: 19,
                                 ),
                               ),
                               style: ElevatedButton.styleFrom(
@@ -1400,7 +1421,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                 disabledForegroundColor: Colors.white.withOpacity(0.7),
                                 shadowColor: Colors.transparent,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(18),
                                 ),
                                 elevation: 0,
                               ),
@@ -1434,12 +1455,12 @@ class _SlotChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
           gradient: selected
               ? const LinearGradient(colors: AppColors.gradientPrimary)
               : null,
@@ -1460,9 +1481,9 @@ class _SlotChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTextStyles.bodyMedium.copyWith(
+          style: AppTextStyles.titleSmall.copyWith(
             color: selected ? Colors.white : AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
+            fontSize: 15,
           ),
         ),
       ),

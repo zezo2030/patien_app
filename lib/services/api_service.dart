@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../config/api_config.dart';
 import '../models/auth_response.dart';
 import '../models/login_request.dart';
@@ -19,24 +20,25 @@ import '../models/chat_message.dart';
 class ApiService {
   // Base URL from config
   static String get baseUrl => ApiConfig.baseUrl;
-  
+
   // Health check method to test server connectivity
   Future<bool> checkServerHealth() async {
     try {
       print('🏥 Checking server health at: $baseUrl/health');
-      final response = await http.get(
-        Uri.parse('$baseUrl/health'),
-        headers: ApiConfig.defaultHeaders,
-      ).timeout(
-        Duration(seconds: 5),
-        onTimeout: () {
-          print('❌ Health check timeout');
-          return http.Response('Timeout', 408);
-        },
-      );
-      
+      final response = await http
+          .get(Uri.parse('$baseUrl/health'), headers: ApiConfig.defaultHeaders)
+          .timeout(
+            Duration(seconds: 5),
+            onTimeout: () {
+              print('❌ Health check timeout');
+              return http.Response('Timeout', 408);
+            },
+          );
+
       final isHealthy = response.statusCode == 200;
-      print('🏥 Health check result: ${isHealthy ? "✅ Server is reachable" : "❌ Server returned ${response.statusCode}"}');
+      print(
+        '🏥 Health check result: ${isHealthy ? "✅ Server is reachable" : "❌ Server returned ${response.statusCode}"}',
+      );
       return isHealthy;
     } catch (e) {
       print('❌ Health check failed: $e');
@@ -51,39 +53,34 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     final url = Uri.parse('${ApiService.baseUrl}$endpoint');
-    final defaultHeaders = {
-      ...ApiConfig.defaultHeaders,
-      ...?headers,
-    };
-    
+    final defaultHeaders = {...ApiConfig.defaultHeaders, ...?headers};
+
     try {
       print('🌐 API Request: POST $url');
       print('📤 Request Body: ${jsonEncode(body)}');
-      
-      final response = await http.post(
-        url,
-        headers: defaultHeaders,
-        body: jsonEncode(body),
-      ).timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          print('⏱️ Request timeout after ${ApiConfig.requestTimeout}s');
-          throw TimeoutException(
-            'انتهت مهلة الاتصال بعد ${ApiConfig.requestTimeout} ثانية.\n'
-            'الخادم: $url\n'
-            'تأكد من:\n'
-            '1. أن الخادم يعمل على $baseUrl\n'
-            '2. أن IP العنوان صحيح (${url.host})\n'
-            '3. أن الجهاز والكمبيوتر على نفس الشبكة\n'
-            '4. أن Firewall لا يمنع الاتصال',
+
+      final response = await http
+          .post(url, headers: defaultHeaders, body: jsonEncode(body))
+          .timeout(
             Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              print('⏱️ Request timeout after ${ApiConfig.requestTimeout}s');
+              throw TimeoutException(
+                'انتهت مهلة الاتصال بعد ${ApiConfig.requestTimeout} ثانية.\n'
+                'الخادم: $url\n'
+                'تأكد من:\n'
+                '1. أن الخادم يعمل على $baseUrl\n'
+                '2. أن IP العنوان صحيح (${url.host})\n'
+                '3. أن الجهاز والكمبيوتر على نفس الشبكة\n'
+                '4. أن Firewall لا يمنع الاتصال',
+                Duration(seconds: ApiConfig.requestTimeout),
+              );
+            },
           );
-        },
-      );
-      
+
       print('📥 Response Status: ${response.statusCode}');
       print('📥 Response Body: ${response.body}');
-      
+
       return response;
     } on SocketException catch (e) {
       print('❌ SocketException: $e');
@@ -94,7 +91,7 @@ class ApiService {
         '1. أن الخادم يعمل: cd new/clinic-api && npm run start:dev\n'
         '2. أن IP العنوان صحيح: ${url.host}\n'
         '3. أن الجهاز والكمبيوتر على نفس الشبكة WiFi\n'
-        '4. أن Firewall يسمح بالاتصال على المنفذ 3000'
+        '4. أن Firewall يسمح بالاتصال على المنفذ 3000',
       );
     } on TimeoutException catch (e) {
       print('❌ TimeoutException: $e');
@@ -108,50 +105,51 @@ class ApiService {
         throw Exception(
           'انتهت مهلة الاتصال.\n'
           'الخادم: $url\n'
-          'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.'
+          'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.',
         );
       }
       throw Exception('خطأ في الاتصال: ${e.toString()}');
     }
   }
-  
+
   // Helper method for GET requests
   Future<http.Response> get(
     String endpoint, {
     Map<String, String>? headers,
   }) async {
     final url = Uri.parse('${ApiService.baseUrl}$endpoint');
-    final defaultHeaders = {
-      ...ApiConfig.defaultHeaders,
-      ...?headers,
-    };
-    
+    final defaultHeaders = {...ApiConfig.defaultHeaders, ...?headers};
+
     try {
       print('🌐 API Request: GET $url');
-      
-      final response = await http.get(url, headers: defaultHeaders).timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          print('⏱️ GET request timeout after ${ApiConfig.requestTimeout}s');
-          throw TimeoutException(
-            'انتهت مهلة الاتصال بعد ${ApiConfig.requestTimeout} ثانية.\n'
-            'الخادم: $url\n'
-            'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.',
+
+      final response = await http
+          .get(url, headers: defaultHeaders)
+          .timeout(
             Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              print(
+                '⏱️ GET request timeout after ${ApiConfig.requestTimeout}s',
+              );
+              throw TimeoutException(
+                'انتهت مهلة الاتصال بعد ${ApiConfig.requestTimeout} ثانية.\n'
+                'الخادم: $url\n'
+                'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.',
+                Duration(seconds: ApiConfig.requestTimeout),
+              );
+            },
           );
-        },
-      );
-      
+
       print('📥 Response Status: ${response.statusCode}');
       print('📥 Response Body: ${response.body}');
-      
+
       return response;
     } on SocketException catch (e) {
       print('❌ SocketException: $e');
       throw Exception(
         'لا يمكن الاتصال بالخادم.\n'
         'الخادم: $url\n'
-        'تأكد من أن الخادم يعمل على $baseUrl'
+        'تأكد من أن الخادم يعمل على $baseUrl',
       );
     } on TimeoutException catch (e) {
       print('❌ TimeoutException: $e');
@@ -165,13 +163,13 @@ class ApiService {
         throw Exception(
           'انتهت مهلة الاتصال.\n'
           'الخادم: $url\n'
-          'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.'
+          'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.',
         );
       }
       throw Exception('خطأ في الاتصال: ${e.toString()}');
     }
   }
-  
+
   // Login
   Future<AuthResponse> login(LoginRequest request) async {
     try {
@@ -182,21 +180,21 @@ class ApiService {
       // if (!isHealthy) {
       //   throw Exception('الخادم غير متاح. تأكد من أن Backend يعمل على ${baseUrl}');
       // }
-      
+
       final response = await post('/auth/login', request.toJson());
-      
+
       // Accept both 200 and 201 as success status codes
       if (response.statusCode == 200 || response.statusCode == 201) {
         try {
           final jsonData = jsonDecode(response.body);
-          
+
           // Validate response structure
           if (jsonData['access_token'] == null || jsonData['user'] == null) {
             print('❌ Invalid response structure: missing access_token or user');
             print('Response: ${response.body}');
             throw Exception('استجابة غير صحيحة من الخادم');
           }
-          
+
           print('✅ Login successful');
           return AuthResponse.fromJson(jsonData);
         } catch (e) {
@@ -207,7 +205,8 @@ class ApiService {
       } else if (response.statusCode == 401) {
         try {
           final error = jsonDecode(response.body);
-          final message = error['message'] ?? 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+          final message =
+              error['message'] ?? 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
           throw Exception(message);
         } catch (e) {
           throw Exception('البريد الإلكتروني أو كلمة المرور غير صحيحة');
@@ -229,21 +228,190 @@ class ApiService {
       throw Exception('خطأ غير متوقع: ${e.toString()}');
     }
   }
-  
-  // Register - returns User object (not AuthResponse)
-  Future<Map<String, dynamic>> register(RegisterRequest request) async {
+
+  // Helper method for multipart POST requests (for file uploads)
+  Future<http.Response> postMultipart(
+    String endpoint,
+    Map<String, String> fields, {
+    File? file,
+    String fileFieldName = 'avatar',
+    Map<String, String>? headers,
+  }) async {
+    final url = Uri.parse('${ApiService.baseUrl}$endpoint');
+    final defaultHeaders = {...ApiConfig.defaultHeaders, ...?headers};
+    // Remove Content-Type header - multipart will set it automatically
+    defaultHeaders.remove('Content-Type');
+
     try {
-      final response = await post('/auth/register/patient', request.toJson());
-      
+      print('🌐 API Request: POST (multipart) $url');
+      print('📤 Fields: $fields');
+      if (file != null) {
+        print('📎 File: ${file.path}');
+      }
+
+      final request = http.MultipartRequest('POST', url);
+
+      // Add headers
+      request.headers.addAll(defaultHeaders);
+
+      // Add fields
+      fields.forEach((key, value) {
+        request.fields[key] = value;
+      });
+
+      // Add file if provided
+      if (file != null && await file.exists()) {
+        final fileStream = http.ByteStream(file.openRead());
+        final fileLength = await file.length();
+        final fileName = file.path.split('/').last;
+
+        // تحديد نوع MIME بناءً على امتداد الملف
+        String mimeType;
+        String mediaSubtype;
+        final extension = fileName.toLowerCase().split('.').last;
+
+        switch (extension) {
+          case 'jpg':
+          case 'jpeg':
+            mimeType = 'image';
+            mediaSubtype = 'jpeg';
+            break;
+          case 'png':
+            mimeType = 'image';
+            mediaSubtype = 'png';
+            break;
+          case 'webp':
+            mimeType = 'image';
+            mediaSubtype = 'webp';
+            break;
+          default:
+            // محاولة تحديد النوع من اسم الملف
+            if (fileName.toLowerCase().contains('.jpg') ||
+                fileName.toLowerCase().contains('.jpeg')) {
+              mimeType = 'image';
+              mediaSubtype = 'jpeg';
+            } else if (fileName.toLowerCase().contains('.png')) {
+              mimeType = 'image';
+              mediaSubtype = 'png';
+            } else if (fileName.toLowerCase().contains('.webp')) {
+              mimeType = 'image';
+              mediaSubtype = 'webp';
+            } else {
+              // افتراضي: jpeg
+              mimeType = 'image';
+              mediaSubtype = 'jpeg';
+            }
+        }
+
+        print('📎 File MIME type: $mimeType/$mediaSubtype');
+
+        final multipartFile = http.MultipartFile(
+          fileFieldName,
+          fileStream,
+          fileLength,
+          filename: fileName,
+          contentType: MediaType(mimeType, mediaSubtype),
+        );
+        request.files.add(multipartFile);
+      }
+
+      final streamedResponse = await request.send().timeout(
+        Duration(seconds: ApiConfig.requestTimeout),
+        onTimeout: () {
+          print(
+            '⏱️ Multipart request timeout after ${ApiConfig.requestTimeout}s',
+          );
+          throw TimeoutException(
+            'انتهت مهلة الاتصال بعد ${ApiConfig.requestTimeout} ثانية.\n'
+            'الخادم: $url\n'
+            'تأكد من:\n'
+            '1. أن الخادم يعمل على $baseUrl\n'
+            '2. أن IP العنوان صحيح (${url.host})\n'
+            '3. أن الجهاز والكمبيوتر على نفس الشبكة\n'
+            '4. أن Firewall لا يمنع الاتصال',
+            Duration(seconds: ApiConfig.requestTimeout),
+          );
+        },
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📥 Response Status: ${response.statusCode}');
+      print('📥 Response Body: ${response.body}');
+
+      return response;
+    } on SocketException catch (e) {
+      print('❌ SocketException: $e');
+      throw Exception(
+        'لا يمكن الاتصال بالخادم.\n'
+        'الخادم: $url\n'
+        'تأكد من:\n'
+        '1. أن الخادم يعمل: cd new/clinic-api && npm run start:dev\n'
+        '2. أن IP العنوان صحيح: ${url.host}\n'
+        '3. أن الجهاز والكمبيوتر على نفس الشبكة WiFi\n'
+        '4. أن Firewall يسمح بالاتصال على المنفذ 3000',
+      );
+    } on TimeoutException catch (e) {
+      print('❌ TimeoutException: $e');
+      rethrow;
+    } on HttpException catch (e) {
+      print('❌ HttpException: $e');
+      throw Exception('خطأ في الاتصال بالخادم: $e');
+    } catch (e) {
+      print('❌ Unexpected error: $e');
+      if (e.toString().contains('timeout') || e is TimeoutException) {
+        throw Exception(
+          'انتهت مهلة الاتصال.\n'
+          'الخادم: $url\n'
+          'تأكد من أن الخادم يعمل وأن IP العنوان صحيح.',
+        );
+      }
+      throw Exception('خطأ في الاتصال: ${e.toString()}');
+    }
+  }
+
+  // Register - returns User object (not AuthResponse)
+  // Supports both JSON and multipart/form-data (with avatar file)
+  Future<Map<String, dynamic>> register(
+    RegisterRequest request, {
+    File? avatarFile,
+  }) async {
+    try {
+      http.Response response;
+
+      // If avatar file is provided, use multipart/form-data
+      if (avatarFile != null && await avatarFile.exists()) {
+        print('📸 Registering with avatar file: ${avatarFile.path}');
+
+        final fields = <String, String>{
+          'name': request.name,
+          'email': request.email,
+          'phone': request.phone,
+          'password': request.password,
+        };
+
+        response = await postMultipart(
+          '/auth/register/patient',
+          fields,
+          file: avatarFile,
+          fileFieldName: 'avatar',
+        );
+      } else {
+        // Use regular JSON POST if no file
+        print('📝 Registering without avatar file');
+        response = await post('/auth/register/patient', request.toJson());
+      }
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         try {
           final jsonData = jsonDecode(response.body);
-          
+
           // Validate response structure
           if (jsonData['id'] == null && jsonData['_id'] == null) {
             throw Exception('استجابة غير صحيحة من الخادم');
           }
-          
+
+          print('✅ Registration successful');
           return jsonData;
         } catch (e) {
           print('❌ Error parsing register response: $e');
@@ -252,7 +420,9 @@ class ApiService {
       } else if (response.statusCode == 409) {
         try {
           final error = jsonDecode(response.body);
-          final message = error['message'] ?? 'البريد الإلكتروني أو رقم الهاتف مستخدم بالفعل';
+          final message =
+              error['message'] ??
+              'البريد الإلكتروني أو رقم الهاتف مستخدم بالفعل';
           throw Exception(message);
         } catch (e) {
           throw Exception('البريد الإلكتروني أو رقم الهاتف مستخدم بالفعل');
@@ -282,23 +452,23 @@ class ApiService {
       throw Exception('خطأ غير متوقع: ${e.toString()}');
     }
   }
-  
+
   // Get current user profile from backend
   Future<User> getCurrentUserProfile(String token) async {
     try {
       final response = await getWithAuth('/auth/me', token);
-      
+
       if (response.statusCode == 200) {
         try {
           final jsonData = jsonDecode(response.body);
-          
+
           // Validate response structure
           if (jsonData['id'] == null && jsonData['_id'] == null) {
             print('❌ Invalid response structure: missing id');
             print('Response: ${response.body}');
             throw Exception('استجابة غير صحيحة من الخادم');
           }
-          
+
           print('✅ User profile retrieved successfully');
           return User.fromJson(jsonData);
         } catch (e) {
@@ -309,7 +479,9 @@ class ApiService {
       } else if (response.statusCode == 401) {
         try {
           final error = jsonDecode(response.body);
-          final message = error['message'] ?? 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى';
+          final message =
+              error['message'] ??
+              'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى';
           throw Exception(message);
         } catch (e) {
           throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
@@ -339,7 +511,83 @@ class ApiService {
       throw Exception('خطأ غير متوقع: ${e.toString()}');
     }
   }
-  
+
+  // Update user profile
+  Future<User> updateProfile(
+    String token, {
+    String? name,
+    String? phone,
+    File? avatarFile,
+  }) async {
+    try {
+      http.Response response;
+
+      // If avatar file is provided, use multipart/form-data
+      if (avatarFile != null && await avatarFile.exists()) {
+        print('📸 Updating profile with avatar file: ${avatarFile.path}');
+
+        final fields = <String, String>{};
+        if (name != null) fields['name'] = name;
+        if (phone != null) fields['phone'] = phone;
+
+        response = await postMultipart(
+          '/auth/profile/update',
+          fields,
+          file: avatarFile,
+          fileFieldName: 'avatar',
+          headers: {'Authorization': 'Bearer $token'},
+        );
+      } else {
+        // Use regular JSON POST if no file
+        print('📝 Updating profile without avatar file');
+        final body = <String, dynamic>{};
+        if (name != null) body['name'] = name;
+        if (phone != null) body['phone'] = phone;
+
+        response = await postWithAuth('/auth/profile/update', body, token);
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final jsonData = jsonDecode(response.body);
+
+          // Validate response structure
+          if (jsonData['id'] == null && jsonData['_id'] == null) {
+            throw Exception('استجابة غير صحيحة من الخادم');
+          }
+
+          print('✅ Profile updated successfully');
+          return User.fromJson(jsonData);
+        } catch (e) {
+          print('❌ Error parsing update profile response: $e');
+          throw Exception('خطأ في معالجة استجابة الخادم');
+        }
+      } else if (response.statusCode == 409) {
+        try {
+          final error = jsonDecode(response.body);
+          final message = error['message'] ?? 'رقم الهاتف مستخدم بالفعل';
+          throw Exception(message);
+        } catch (e) {
+          throw Exception('رقم الهاتف مستخدم بالفعل');
+        }
+      } else {
+        try {
+          final error = jsonDecode(response.body);
+          final message = error['message'] ?? 'فشل تحديث الملف الشخصي';
+          throw Exception(message);
+        } catch (e) {
+          throw Exception('فشل تحديث الملف الشخصي (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      // Re-throw if it's already an Exception with a message
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('خطأ غير متوقع: ${e.toString()}');
+    }
+  }
+
   // GET request with Authorization header
   Future<http.Response> getWithAuth(
     String endpoint,
@@ -350,7 +598,7 @@ class ApiService {
     if (token.isEmpty) {
       throw Exception('غير مصرح - يرجى تسجيل الدخول');
     }
-    
+
     Uri url;
     if (queryParameters != null && queryParameters.isNotEmpty) {
       // If endpoint already has query parameters, merge them
@@ -361,40 +609,45 @@ class ApiService {
     } else {
       url = Uri.parse('$baseUrl$endpoint');
     }
-    
+
     final defaultHeaders = {
       ...ApiConfig.defaultHeaders,
       'Authorization': 'Bearer $token',
       ...?headers,
     };
-    
+
     try {
       print('🌐 API Request: GET $url');
       print('🔐 With Authorization header');
-      
-      final response = await http.get(url, headers: defaultHeaders).timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
-        },
-      );
-      
+
+      final response = await http
+          .get(url, headers: defaultHeaders)
+          .timeout(
+            Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+            },
+          );
+
       print('📥 Response Status: ${response.statusCode}');
-      
+
       // Handle 401 Unauthorized
       if (response.statusCode == 401) {
         throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
       }
-      
+
       print('📥 Response Body: ${response.body}');
-      
+
       return response;
     } on SocketException {
-      throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl');
+      throw Exception(
+        'لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl',
+      );
     } on HttpException {
       throw Exception('خطأ في الاتصال بالخادم');
     } catch (e) {
-      if (e.toString().contains('غير مصرح') || e.toString().contains('انتهت صلاحية')) {
+      if (e.toString().contains('غير مصرح') ||
+          e.toString().contains('انتهت صلاحية')) {
         rethrow;
       }
       if (e.toString().contains('timeout')) {
@@ -403,7 +656,7 @@ class ApiService {
       throw Exception('خطأ في الاتصال: ${e.toString()}');
     }
   }
-  
+
   // POST request with Authorization header
   Future<http.Response> postWithAuth(
     String endpoint,
@@ -414,46 +667,47 @@ class ApiService {
     if (token.isEmpty) {
       throw Exception('غير مصرح - يرجى تسجيل الدخول');
     }
-    
+
     final url = Uri.parse('${ApiService.baseUrl}$endpoint');
     final defaultHeaders = {
       ...ApiConfig.defaultHeaders,
       'Authorization': 'Bearer $token',
       ...?headers,
     };
-    
+
     try {
       print('🌐 API Request: POST $url');
       print('🔐 With Authorization header');
       print('📤 Request Body: ${jsonEncode(body)}');
-      
-      final response = await http.post(
-        url,
-        headers: defaultHeaders,
-        body: jsonEncode(body),
-      ).timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
-        },
-      );
-      
+
+      final response = await http
+          .post(url, headers: defaultHeaders, body: jsonEncode(body))
+          .timeout(
+            Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+            },
+          );
+
       print('📥 Response Status: ${response.statusCode}');
-      
+
       // Handle 401 Unauthorized
       if (response.statusCode == 401) {
         throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
       }
-      
+
       print('📥 Response Body: ${response.body}');
-      
+
       return response;
     } on SocketException {
-      throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl');
+      throw Exception(
+        'لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl',
+      );
     } on HttpException {
       throw Exception('خطأ في الاتصال بالخادم');
     } catch (e) {
-      if (e.toString().contains('غير مصرح') || e.toString().contains('انتهت صلاحية')) {
+      if (e.toString().contains('غير مصرح') ||
+          e.toString().contains('انتهت صلاحية')) {
         rethrow;
       }
       if (e.toString().contains('timeout')) {
@@ -462,7 +716,7 @@ class ApiService {
       throw Exception('خطأ في الاتصال: ${e.toString()}');
     }
   }
-  
+
   // PATCH request with Authorization header
   Future<http.Response> patchWithAuth(
     String endpoint,
@@ -473,46 +727,47 @@ class ApiService {
     if (token.isEmpty) {
       throw Exception('غير مصرح - يرجى تسجيل الدخول');
     }
-    
+
     final url = Uri.parse('${ApiService.baseUrl}$endpoint');
     final defaultHeaders = {
       ...ApiConfig.defaultHeaders,
       'Authorization': 'Bearer $token',
       ...?headers,
     };
-    
+
     try {
       print('🌐 API Request: PATCH $url');
       print('🔐 With Authorization header');
       print('📤 Request Body: ${jsonEncode(body)}');
-      
-      final response = await http.patch(
-        url,
-        headers: defaultHeaders,
-        body: jsonEncode(body),
-      ).timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
-        },
-      );
-      
+
+      final response = await http
+          .patch(url, headers: defaultHeaders, body: jsonEncode(body))
+          .timeout(
+            Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+            },
+          );
+
       print('📥 Response Status: ${response.statusCode}');
-      
+
       // Handle 401 Unauthorized
       if (response.statusCode == 401) {
         throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
       }
-      
+
       print('📥 Response Body: ${response.body}');
-      
+
       return response;
     } on SocketException {
-      throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl');
+      throw Exception(
+        'لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl',
+      );
     } on HttpException {
       throw Exception('خطأ في الاتصال بالخادم');
     } catch (e) {
-      if (e.toString().contains('غير مصرح') || e.toString().contains('انتهت صلاحية')) {
+      if (e.toString().contains('غير مصرح') ||
+          e.toString().contains('انتهت صلاحية')) {
         rethrow;
       }
       if (e.toString().contains('timeout')) {
@@ -521,63 +776,56 @@ class ApiService {
       throw Exception('خطأ في الاتصال: ${e.toString()}');
     }
   }
-  
+
   // DELETE request with Authorization header
   Future<http.Response> deleteWithAuth(
     String endpoint,
-    Map<String, dynamic>? body,
     String token, {
     Map<String, String>? headers,
   }) async {
     if (token.isEmpty) {
       throw Exception('غير مصرح - يرجى تسجيل الدخول');
     }
-    
+
     final url = Uri.parse('${ApiService.baseUrl}$endpoint');
     final defaultHeaders = {
       ...ApiConfig.defaultHeaders,
       'Authorization': 'Bearer $token',
       ...?headers,
     };
-    
+
     try {
       print('🌐 API Request: DELETE $url');
       print('🔐 With Authorization header');
-      if (body != null) {
-        print('📤 Request Body: ${jsonEncode(body)}');
-      }
-      
-      final request = http.Request('DELETE', url);
-      request.headers.addAll(defaultHeaders);
-      if (body != null) {
-        request.body = jsonEncode(body);
-      }
-      
-      final streamedResponse = await request.send().timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
-        },
-      );
-      
-      final response = await http.Response.fromStream(streamedResponse);
-      
+
+      final response = await http
+          .delete(url, headers: defaultHeaders)
+          .timeout(
+            Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+            },
+          );
+
       print('📥 Response Status: ${response.statusCode}');
-      
+
       // Handle 401 Unauthorized
       if (response.statusCode == 401) {
         throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
       }
-      
+
       print('📥 Response Body: ${response.body}');
-      
+
       return response;
     } on SocketException {
-      throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl');
+      throw Exception(
+        'لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl',
+      );
     } on HttpException {
       throw Exception('خطأ في الاتصال بالخادم');
     } catch (e) {
-      if (e.toString().contains('غير مصرح') || e.toString().contains('انتهت صلاحية')) {
+      if (e.toString().contains('غير مصرح') ||
+          e.toString().contains('انتهت صلاحية')) {
         rethrow;
       }
       if (e.toString().contains('timeout')) {
@@ -586,21 +834,21 @@ class ApiService {
       throw Exception('خطأ في الاتصال: ${e.toString()}');
     }
   }
-  
+
   // Get public departments (no authentication required)
   Future<List<Department>> getPublicDepartments() async {
     try {
       final response = await get('/departments/public');
-      
+
       if (response.statusCode == 200) {
         try {
           final jsonData = jsonDecode(response.body);
-          
+
           // Handle both array response and wrapped response
-          final List<dynamic> departmentsList = jsonData is List 
-              ? jsonData 
+          final List<dynamic> departmentsList = jsonData is List
+              ? jsonData
               : (jsonData['data'] is List ? jsonData['data'] : []);
-          
+
           return departmentsList
               .map((json) => Department.fromJson(json))
               .toList();
@@ -626,7 +874,7 @@ class ApiService {
       throw Exception('خطأ غير متوقع: ${e.toString()}');
     }
   }
-  
+
   // Get patient appointments with optional filters
   Future<PaginatedAppointments> getPatientAppointments({
     String? status,
@@ -638,21 +886,21 @@ class ApiService {
       if (token == null || token.isEmpty) {
         throw Exception('غير مصرح - يرجى تسجيل الدخول');
       }
-      
+
       // Build query parameters map
       final Map<String, String> queryParams = {
         'page': page.toString(),
         'limit': limit.toString(),
       };
-      
+
       if (status != null && status.isNotEmpty) {
         queryParams['status'] = status;
       }
-      
+
       // Build URI with query parameters
       final baseUri = Uri.parse(baseUrl);
       final path = '/patient/appointments';
-      
+
       final uri = Uri(
         scheme: baseUri.scheme,
         host: baseUri.host,
@@ -660,43 +908,45 @@ class ApiService {
         path: '${baseUri.path}$path',
         queryParameters: queryParams,
       );
-      
+
       // Make the request directly
       final defaultHeaders = {
         ...ApiConfig.defaultHeaders,
         'Authorization': 'Bearer $token',
       };
-      
+
       try {
         print('🌐 API Request: GET $uri');
         print('🔐 With Authorization header');
-        
-        final response = await http.get(uri, headers: defaultHeaders).timeout(
-          Duration(seconds: ApiConfig.requestTimeout),
-          onTimeout: () {
-            throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
-          },
-        );
-        
+
+        final response = await http
+            .get(uri, headers: defaultHeaders)
+            .timeout(
+              Duration(seconds: ApiConfig.requestTimeout),
+              onTimeout: () {
+                throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+              },
+            );
+
         print('📥 Response Status: ${response.statusCode}');
-        
+
         // Handle 401 Unauthorized
         if (response.statusCode == 401) {
           throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
         }
-        
+
         print('📥 Response Body: ${response.body}');
-        
+
         // Process response
         if (response.statusCode == 200) {
           try {
             final jsonData = jsonDecode(response.body);
-            
+
             // Handle different response formats
             // The backend might return: { appointments: [], total, page, limit, totalPages }
             // Or: { data: { appointments: [], ... }, ... }
             Map<String, dynamic> paginatedData;
-            
+
             if (jsonData['appointments'] != null) {
               paginatedData = jsonData;
             } else if (jsonData['data'] != null && jsonData['data'] is Map) {
@@ -715,7 +965,7 @@ class ApiService {
             } else {
               paginatedData = jsonData;
             }
-            
+
             return PaginatedAppointments.fromJson(paginatedData);
           } catch (e) {
             print('❌ Error parsing appointments response: $e');
@@ -732,11 +982,14 @@ class ApiService {
           }
         }
       } on SocketException {
-        throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl');
+        throw Exception(
+          'لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl',
+        );
       } on HttpException {
         throw Exception('خطأ في الاتصال بالخادم');
       } catch (e) {
-        if (e.toString().contains('غير مصرح') || e.toString().contains('انتهت صلاحية')) {
+        if (e.toString().contains('غير مصرح') ||
+            e.toString().contains('انتهت صلاحية')) {
           rethrow;
         }
         if (e.toString().contains('timeout')) {
@@ -767,17 +1020,17 @@ class ApiService {
       if (token == null || token.isEmpty) {
         throw Exception('غير مصرح - يرجى تسجيل الدخول');
       }
-      
+
       // Build query parameters map
       final Map<String, String> queryParams = {
         'page': page.toString(),
         'limit': limit.toString(),
       };
-      
+
       // Build URI with query parameters
       final baseUri = Uri.parse(baseUrl);
       final path = '/patient/records';
-      
+
       final uri = Uri(
         scheme: baseUri.scheme,
         host: baseUri.host,
@@ -785,41 +1038,43 @@ class ApiService {
         path: '${baseUri.path}$path',
         queryParameters: queryParams,
       );
-      
+
       // Make the request directly
       final defaultHeaders = {
         ...ApiConfig.defaultHeaders,
         'Authorization': 'Bearer $token',
       };
-      
+
       try {
         print('🌐 API Request: GET $uri');
         print('🔐 With Authorization header');
-        
-        final response = await http.get(uri, headers: defaultHeaders).timeout(
-          Duration(seconds: ApiConfig.requestTimeout),
-          onTimeout: () {
-            throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
-          },
-        );
-        
+
+        final response = await http
+            .get(uri, headers: defaultHeaders)
+            .timeout(
+              Duration(seconds: ApiConfig.requestTimeout),
+              onTimeout: () {
+                throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+              },
+            );
+
         print('📥 Response Status: ${response.statusCode}');
-        
+
         // Handle 401 Unauthorized
         if (response.statusCode == 401) {
           throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
         }
-        
+
         print('📥 Response Body: ${response.body}');
-        
+
         // Process response
         if (response.statusCode == 200) {
           try {
             final jsonData = jsonDecode(response.body);
-            
+
             // Handle different response formats
             Map<String, dynamic> paginatedData;
-            
+
             if (jsonData['records'] != null) {
               paginatedData = jsonData;
             } else if (jsonData['data'] != null && jsonData['data'] is Map) {
@@ -838,7 +1093,7 @@ class ApiService {
             } else {
               paginatedData = jsonData;
             }
-            
+
             return PaginatedMedicalRecords.fromJson(paginatedData);
           } catch (e) {
             print('❌ Error parsing medical records response: $e');
@@ -851,15 +1106,20 @@ class ApiService {
             final message = error['message'] ?? 'فشل تحميل السجلات الطبية';
             throw Exception(message);
           } catch (e) {
-            throw Exception('فشل تحميل السجلات الطبية (${response.statusCode})');
+            throw Exception(
+              'فشل تحميل السجلات الطبية (${response.statusCode})',
+            );
           }
         }
       } on SocketException {
-        throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl');
+        throw Exception(
+          'لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على $baseUrl',
+        );
       } on HttpException {
         throw Exception('خطأ في الاتصال بالخادم');
       } catch (e) {
-        if (e.toString().contains('غير مصرح') || e.toString().contains('انتهت صلاحية')) {
+        if (e.toString().contains('غير مصرح') ||
+            e.toString().contains('انتهت صلاحية')) {
           rethrow;
         }
         if (e.toString().contains('timeout')) {
@@ -880,8 +1140,91 @@ class ApiService {
     }
   }
 
+  /// إنشاء سجل طبي جديد
+  ///
+  /// [appointmentId] معرف الموعد
+  /// [diagnosis] التشخيص (مطلوب)
+  /// [prescription] الوصفة الطبية (اختياري)
+  /// [vitalSigns] العلامات الحيوية (اختياري)
+  /// [notes] الملاحظات (اختياري)
+  /// [token] رمز المصادقة
+  Future<MedicalRecord> createMedicalRecord({
+    required String appointmentId,
+    required String diagnosis,
+    String? prescription,
+    VitalSigns? vitalSigns,
+    String? notes,
+    String? token,
+  }) async {
+    try {
+      if (token == null || token.isEmpty) {
+        throw Exception('غير مصرح - يرجى تسجيل الدخول');
+      }
+
+      // بناء البيانات
+      final body = <String, dynamic>{
+        'appointmentId': appointmentId,
+        'diagnosis': diagnosis,
+      };
+
+      if (prescription != null && prescription.isNotEmpty) {
+        body['prescription'] = prescription;
+      }
+
+      if (vitalSigns != null) {
+        body['vitalSigns'] = <String, dynamic>{};
+        if (vitalSigns.bloodPressure != null) {
+          body['vitalSigns']['bloodPressure'] = vitalSigns.bloodPressure;
+        }
+        if (vitalSigns.heartRate != null) {
+          body['vitalSigns']['heartRate'] = vitalSigns.heartRate;
+        }
+        if (vitalSigns.temperature != null) {
+          body['vitalSigns']['temperature'] = vitalSigns.temperature;
+        }
+        if (vitalSigns.weight != null) {
+          body['vitalSigns']['weight'] = vitalSigns.weight;
+        }
+        if (vitalSigns.height != null) {
+          body['vitalSigns']['height'] = vitalSigns.height;
+        }
+      }
+
+      if (notes != null && notes.isNotEmpty) {
+        body['notes'] = notes;
+      }
+
+      final response = await postWithAuth('/doctor/records', body, token);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        try {
+          final jsonData = jsonDecode(response.body);
+          final recordData = jsonData['record'] ?? jsonData['data'] ?? jsonData;
+          return MedicalRecord.fromJson(recordData);
+        } catch (e) {
+          print('❌ Error parsing create medical record response: $e');
+          print('Response body: ${response.body}');
+          throw Exception('خطأ في معالجة استجابة الخادم');
+        }
+      } else {
+        try {
+          final error = jsonDecode(response.body);
+          final message = error['message'] ?? 'فشل إنشاء السجل الطبي';
+          throw Exception(message);
+        } catch (e) {
+          throw Exception('فشل إنشاء السجل الطبي (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('خطأ غير متوقع: ${e.toString()}');
+    }
+  }
+
   /// إنشاء موعد جديد
-  /// 
+  ///
   /// [doctorId] معرف الطبيب
   /// [serviceId] معرف الخدمة
   /// [startAt] وقت بداية الموعد
@@ -940,18 +1283,21 @@ class ApiService {
         try {
           final error = jsonDecode(response.body);
           String message = error['message'] ?? 'فشل إنشاء الموعد';
-          
+
           // تحسين رسالة الخطأ إذا كان السبب هو عدم وجود schedule
-          if (message.toLowerCase().contains('schedule not found') || 
+          if (message.toLowerCase().contains('schedule not found') ||
               message.toLowerCase().contains('doctor schedule')) {
-            message = 'لا يمكن حجز موعد: الطبيب لم يضبط جدوله الزمني بعد. يرجى المحاولة لاحقاً أو التواصل مع الطبيب.';
+            message =
+                'لا يمكن حجز موعد: الطبيب لم يضبط جدوله الزمني بعد. يرجى المحاولة لاحقاً أو التواصل مع الطبيب.';
           }
-          
+
           throw Exception(message);
         } catch (e) {
           // إذا كان الخطأ في parsing JSON، نتحقق من status code
           if (response.statusCode == 404) {
-            throw Exception('لا يمكن حجز موعد: الطبيب لم يضبط جدوله الزمني بعد. يرجى المحاولة لاحقاً أو التواصل مع الطبيب.');
+            throw Exception(
+              'لا يمكن حجز موعد: الطبيب لم يضبط جدوله الزمني بعد. يرجى المحاولة لاحقاً أو التواصل مع الطبيب.',
+            );
           }
           throw Exception('فشل إنشاء الموعد (${response.statusCode})');
         }
@@ -963,7 +1309,7 @@ class ApiService {
   }
 
   /// إلغاء موعد
-  /// 
+  ///
   /// [appointmentId] معرف الموعد
   /// [reason] سبب الإلغاء (اختياري)
   /// [token] رمز المصادقة
@@ -1012,7 +1358,7 @@ class ApiService {
   }
 
   /// إعادة جدولة موعد
-  /// 
+  ///
   /// [appointmentId] معرف الموعد
   /// [newStartAt] وقت البداية الجديد
   /// [metadata] بيانات إضافية (اختياري)
@@ -1063,7 +1409,7 @@ class ApiService {
   }
 
   /// جلب أوقات التوفر للطبيب
-  /// 
+  ///
   /// [doctorId] معرف الطبيب
   /// [serviceId] معرف الخدمة
   /// [weekStart] تاريخ بداية الأسبوع (اختياري)
@@ -1086,7 +1432,7 @@ class ApiService {
 
       final baseUri = Uri.parse(baseUrl);
       final path = '/patient/doctors/$doctorId/availability';
-      
+
       final uri = Uri(
         scheme: baseUri.scheme,
         host: baseUri.host,
@@ -1100,12 +1446,14 @@ class ApiService {
         'Authorization': 'Bearer $token',
       };
 
-      final response = await http.get(uri, headers: defaultHeaders).timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال');
-        },
-      );
+      final response = await http
+          .get(uri, headers: defaultHeaders)
+          .timeout(
+            Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال');
+            },
+          );
 
       if (response.statusCode == 401) {
         throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
@@ -1133,7 +1481,7 @@ class ApiService {
   }
 
   /// جلب قائمة الأطباء
-  /// 
+  ///
   /// [departmentId] فلترة حسب التخصص (اختياري)
   /// [serviceId] فلترة حسب الخدمة (اختياري)
   /// [status] فلترة حسب الحالة (افتراضياً APPROVED)
@@ -1162,7 +1510,7 @@ class ApiService {
 
       final baseUri = Uri.parse(baseUrl);
       final path = '/patient/doctors';
-      
+
       final uri = Uri(
         scheme: baseUri.scheme,
         host: baseUri.host,
@@ -1176,12 +1524,14 @@ class ApiService {
         'Authorization': 'Bearer $token',
       };
 
-      final response = await http.get(uri, headers: defaultHeaders).timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال');
-        },
-      );
+      final response = await http
+          .get(uri, headers: defaultHeaders)
+          .timeout(
+            Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال');
+            },
+          );
 
       if (response.statusCode == 401) {
         throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
@@ -1190,13 +1540,11 @@ class ApiService {
       if (response.statusCode == 200) {
         try {
           final jsonData = jsonDecode(response.body);
-          final List<dynamic> doctorsList = jsonData is List 
-              ? jsonData 
+          final List<dynamic> doctorsList = jsonData is List
+              ? jsonData
               : (jsonData['data'] is List ? jsonData['data'] : []);
-          
-          return doctorsList
-              .map((json) => Doctor.fromJson(json))
-              .toList();
+
+          return doctorsList.map((json) => Doctor.fromJson(json)).toList();
         } catch (e) {
           print('❌ Error parsing doctors response: $e');
           throw Exception('خطأ في معالجة استجابة الخادم');
@@ -1216,7 +1564,7 @@ class ApiService {
   }
 
   /// جلب تفاصيل طبيب محدد
-  /// 
+  ///
   /// [doctorId] معرف الطبيب
   /// [token] رمز المصادقة
   Future<Doctor> getDoctorById({
@@ -1228,10 +1576,7 @@ class ApiService {
         throw Exception('غير مصرح - يرجى تسجيل الدخول');
       }
 
-      final response = await getWithAuth(
-        '/patient/doctors/$doctorId',
-        token,
-      );
+      final response = await getWithAuth('/patient/doctors/$doctorId', token);
 
       if (response.statusCode == 200) {
         try {
@@ -1258,16 +1603,14 @@ class ApiService {
 
 extension DoctorApi on ApiService {
   // Doctor: Get current doctor profile
-  Future<Map<String, dynamic>> getCurrentDoctorProfile({
-    String? token,
-  }) async {
+  Future<Map<String, dynamic>> getCurrentDoctorProfile({String? token}) async {
     try {
       if (token == null || token.isEmpty) {
         throw Exception('غير مصرح - يرجى تسجيل الدخول');
       }
 
       final response = await getWithAuth('/doctor/me', token);
-      
+
       if (response.statusCode == 200) {
         try {
           return Map<String, dynamic>.from(jsonDecode(response.body));
@@ -1442,9 +1785,7 @@ extension DoctorApi on ApiService {
   }
 
   // Doctor: Get schedule
-  Future<Map<String, dynamic>> getDoctorSchedule({
-    String? token,
-  }) async {
+  Future<Map<String, dynamic>> getDoctorSchedule({String? token}) async {
     try {
       if (token == null || token.isEmpty) {
         throw Exception('غير مصرح - يرجى تسجيل الدخول');
@@ -1462,11 +1803,7 @@ extension DoctorApi on ApiService {
 
       // Treat first-time (no schedule) as empty schedule
       if (response.statusCode == 404) {
-        return {
-          'weeklyTemplate': [],
-          'exceptions': [],
-          'holidays': [],
-        };
+        return {'weeklyTemplate': [], 'exceptions': [], 'holidays': []};
       } else {
         try {
           final error = jsonDecode(response.body);
@@ -1611,7 +1948,6 @@ extension DoctorApi on ApiService {
 
       final response = await deleteWithAuth(
         '/doctor/schedule/exceptions/$date',
-        null,
         token,
       );
       if (response.statusCode != 200) {
@@ -1673,10 +2009,7 @@ extension DoctorApi on ApiService {
   }
 
   // Doctor: Remove holiday
-  Future<void> removeHoliday({
-    required String holidayId,
-    String? token,
-  }) async {
+  Future<void> removeHoliday({required String holidayId, String? token}) async {
     try {
       if (token == null || token.isEmpty) {
         throw Exception('غير مصرح - يرجى تسجيل الدخول');
@@ -1684,7 +2017,6 @@ extension DoctorApi on ApiService {
 
       final response = await deleteWithAuth(
         '/doctor/schedule/holidays/$holidayId',
-        null,
         token,
       );
       if (response.statusCode != 200) {
@@ -1711,46 +2043,47 @@ extension DoctorApi on ApiService {
     if (token.isEmpty) {
       throw Exception('غير مصرح - يرجى تسجيل الدخول');
     }
-    
+
     final url = Uri.parse('${ApiService.baseUrl}$endpoint');
     final defaultHeaders = {
       ...ApiConfig.defaultHeaders,
       'Authorization': 'Bearer $token',
       ...?headers,
     };
-    
+
     try {
       print('🌐 API Request: PUT $url');
       print('🔐 With Authorization header');
       print('📤 Request Body: ${jsonEncode(body)}');
-      
-      final response = await http.put(
-        url,
-        headers: defaultHeaders,
-        body: jsonEncode(body),
-      ).timeout(
-        Duration(seconds: ApiConfig.requestTimeout),
-        onTimeout: () {
-          throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
-        },
-      );
-      
+
+      final response = await http
+          .put(url, headers: defaultHeaders, body: jsonEncode(body))
+          .timeout(
+            Duration(seconds: ApiConfig.requestTimeout),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت');
+            },
+          );
+
       print('📥 Response Status: ${response.statusCode}');
-      
+
       // Handle 401 Unauthorized
       if (response.statusCode == 401) {
         throw Exception('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
       }
-      
+
       print('📥 Response Body: ${response.body}');
-      
+
       return response;
     } on SocketException {
-      throw Exception('لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على ${ApiService.baseUrl}');
+      throw Exception(
+        'لا يمكن الاتصال بالخادم. تأكد من أن الباك اند يعمل على ${ApiService.baseUrl}',
+      );
     } on HttpException {
       throw Exception('خطأ في الاتصال بالخادم');
     } catch (e) {
-      if (e.toString().contains('غير مصرح') || e.toString().contains('انتهت صلاحية')) {
+      if (e.toString().contains('غير مصرح') ||
+          e.toString().contains('انتهت صلاحية')) {
         rethrow;
       }
       if (e.toString().contains('timeout')) {
@@ -1761,31 +2094,30 @@ extension DoctorApi on ApiService {
   }
 
   // Doctor: Get services
-  Future<List<DoctorService>> getDoctorServices({
-    String? token,
-  }) async {
+  Future<List<DoctorService>> getDoctorServices({String? token}) async {
     try {
       if (token == null || token.isEmpty) {
         throw Exception('غير مصرح - يرجى تسجيل الدخول');
       }
 
       final response = await getWithAuth('/doctor/me/services', token);
-      
+
       if (response.statusCode == 200) {
         try {
           final jsonData = jsonDecode(response.body);
           List<dynamic> servicesList;
-          
+
           if (jsonData is List) {
             servicesList = jsonData;
-          } else if (jsonData['services'] != null && jsonData['services'] is List) {
+          } else if (jsonData['services'] != null &&
+              jsonData['services'] is List) {
             servicesList = jsonData['services'];
           } else if (jsonData['data'] != null && jsonData['data'] is List) {
             servicesList = jsonData['data'];
           } else {
             servicesList = [];
           }
-          
+
           return servicesList
               .map((item) => DoctorService.fromJson(item))
               .toList();
@@ -1815,15 +2147,13 @@ extension DoctorApi on ApiService {
   }) async {
     try {
       // استخدام endpoint عام للقسم للحصول على الخدمات (لا يحتاج authentication)
-      final response = await get(
-        '/departments/public/$departmentId',
-      );
-      
+      final response = await get('/departments/public/$departmentId');
+
       if (response.statusCode == 200) {
         try {
           final jsonData = jsonDecode(response.body);
           List<dynamic> servicesList = [];
-          
+
           // endpoint يعيد department مع services في property منفصل
           if (jsonData['services'] != null && jsonData['services'] is List) {
             servicesList = jsonData['services'];
@@ -1832,10 +2162,8 @@ extension DoctorApi on ApiService {
           } else if (jsonData['data'] != null && jsonData['data'] is List) {
             servicesList = jsonData['data'];
           }
-          
-          return servicesList
-              .map((item) => Service.fromJson(item))
-              .toList();
+
+          return servicesList.map((item) => Service.fromJson(item)).toList();
         } catch (e) {
           print('❌ Error parsing department services: $e');
           throw Exception('خطأ في معالجة استجابة الخادم');
@@ -1914,10 +2242,9 @@ extension DoctorApi on ApiService {
 
       final response = await deleteWithAuth(
         '/doctor/me/services/$serviceId',
-        null,
         token,
       );
-      
+
       if (response.statusCode != 200 && response.statusCode != 204) {
         try {
           final error = jsonDecode(response.body);
@@ -1932,6 +2259,242 @@ extension DoctorApi on ApiService {
       throw Exception('خطأ في حذف الخدمة: ${e.toString()}');
     }
   }
+
+  // Chat API Methods
+
+  /// Get chat session info
+  Future<ChatSessionInfo> getChatSession({
+    required String appointmentId,
+    required String token,
+  }) async {
+    try {
+      final response = await getWithAuth(
+        '/chat/sessions/$appointmentId',
+        token,
+      );
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonData = jsonDecode(response.body);
+          return ChatSessionInfo.fromJson(jsonData);
+        } catch (e) {
+          print('❌ Error parsing chat session response: $e');
+          throw Exception('خطأ في معالجة استجابة الخادم');
+        }
+      } else if (response.statusCode == 404) {
+        throw Exception('جلسة الدردشة غير موجودة');
+      } else {
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['message'] ?? 'فشل جلب معلومات جلسة الدردشة');
+        } catch (e) {
+          throw Exception(
+            'فشل جلب معلومات جلسة الدردشة (${response.statusCode})',
+          );
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('خطأ في جلب معلومات جلسة الدردشة: ${e.toString()}');
+    }
+  }
+
+  /// Get chat messages
+  Future<MessagesResponse> getChatMessages({
+    required String appointmentId,
+    required int page,
+    required int limit,
+    required String token,
+  }) async {
+    try {
+      final response = await getWithAuth(
+        '/chat/sessions/$appointmentId/messages?page=$page&limit=$limit',
+        token,
+      );
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonData = jsonDecode(response.body);
+          return MessagesResponse.fromJson(jsonData);
+        } catch (e) {
+          print('❌ Error parsing chat messages response: $e');
+          throw Exception('خطأ في معالجة استجابة الخادم');
+        }
+      } else {
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['message'] ?? 'فشل جلب الرسائل');
+        } catch (e) {
+          throw Exception('فشل جلب الرسائل (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('خطأ في جلب الرسائل: ${e.toString()}');
+    }
+  }
+
+  /// Send chat message
+  Future<ChatMessage> sendChatMessage({
+    required String appointmentId,
+    required String content,
+    required String type,
+    String? replyTo,
+    required String token,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'content': content,
+        'type': type,
+        if (replyTo != null) 'replyTo': replyTo,
+      };
+
+      final response = await postWithAuth(
+        '/chat/sessions/$appointmentId/messages',
+        body,
+        token,
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        try {
+          final jsonData = jsonDecode(response.body);
+          return ChatMessage.fromJson(jsonData);
+        } catch (e) {
+          print('❌ Error parsing send message response: $e');
+          throw Exception('خطأ في معالجة استجابة الخادم');
+        }
+      } else {
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['message'] ?? 'فشل إرسال الرسالة');
+        } catch (e) {
+          throw Exception('فشل إرسال الرسالة (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('خطأ في إرسال الرسالة: ${e.toString()}');
+    }
+  }
+
+  /// Mark chat messages as read
+  Future<void> markChatAsRead({
+    required String appointmentId,
+    required String token,
+  }) async {
+    try {
+      final response = await postWithAuth(
+        '/chat/sessions/$appointmentId/read',
+        {},
+        token,
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['message'] ?? 'فشل تحديد الرسائل كمقروءة');
+        } catch (e) {
+          throw Exception('فشل تحديد الرسائل كمقروءة (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('خطأ في تحديد الرسائل كمقروءة: ${e.toString()}');
+    }
+  }
+
+  /// Get unread message count
+  Future<int> getChatUnreadCount({
+    required String appointmentId,
+    required String token,
+  }) async {
+    try {
+      final response = await getWithAuth(
+        '/chat/sessions/$appointmentId/unread-count',
+        token,
+      );
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonData = jsonDecode(response.body);
+          if (jsonData is Map && jsonData['unreadCount'] != null) {
+            return jsonData['unreadCount'] as int;
+          }
+          return 0;
+        } catch (e) {
+          print('❌ Error parsing unread count response: $e');
+          return 0;
+        }
+      } else {
+        return 0;
+      }
+    } catch (e) {
+      print('⚠️ Error getting unread count: $e');
+      return 0;
+    }
+  }
+
+  // Notification Token API Methods
+
+  /// Save device token to backend
+  Future<void> saveDeviceToken(
+    String userId,
+    String deviceToken,
+    String platform,
+    String authToken,
+  ) async {
+    try {
+      final body = <String, dynamic>{
+        'userId': userId,
+        'deviceToken': deviceToken,
+        'platform': platform,
+      };
+
+      final response = await postWithAuth(
+        '/notifications/device-tokens',
+        body,
+        authToken,
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['message'] ?? 'فشل حفظ رمز الجهاز');
+        } catch (e) {
+          throw Exception('فشل حفظ رمز الجهاز (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('خطأ في حفظ رمز الجهاز: ${e.toString()}');
+    }
+  }
+
+  /// Delete device token from backend
+  Future<void> deleteDeviceToken(
+    String userId,
+    String deviceToken,
+    String authToken,
+  ) async {
+    try {
+      final response = await deleteWithAuth(
+        '/notifications/device-tokens/$userId/$deviceToken',
+        authToken,
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['message'] ?? 'فشل حذف رمز الجهاز');
+        } catch (e) {
+          throw Exception('فشل حذف رمز الجهاز (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('خطأ في حذف رمز الجهاز: ${e.toString()}');
+    }
+  }
 }
 
 // Video Session API Methods
@@ -1940,7 +2503,7 @@ extension VideoSessionApi on ApiService {
   Future<AgoraAppIdResponse> getAgoraAppId() async {
     try {
       final response = await get('/sessions/video/app-id');
-      
+
       if (response.statusCode == 200) {
         try {
           final jsonData = jsonDecode(response.body);
@@ -2008,10 +2571,13 @@ extension VideoSessionApi on ApiService {
       } else if (response.statusCode == 500) {
         try {
           final error = jsonDecode(response.body);
-          final message = error['message'] ?? 'خطأ في الخادم. يرجى المحاولة مرة أخرى';
+          final message =
+              error['message'] ?? 'خطأ في الخادم. يرجى المحاولة مرة أخرى';
           throw Exception(message);
         } catch (e) {
-          throw Exception('خطأ في الخادم. تأكد من أن إعدادات Agora صحيحة في الباكند');
+          throw Exception(
+            'خطأ في الخادم. تأكد من أن إعدادات Agora صحيحة في الباكند',
+          );
         }
       } else if (response.statusCode == 404) {
         throw Exception('الموعد غير موجود');
@@ -2159,289 +2725,4 @@ extension VideoSessionApi on ApiService {
       throw Exception('خطأ في إنهاء الجلسة: ${e.toString()}');
     }
   }
-
-  /// Get chat session information
-  Future<ChatSessionInfo> getChatSession({
-    required String appointmentId,
-    String? token,
-  }) async {
-    try {
-      if (token == null || token.isEmpty) {
-        throw Exception('غير مصرح - يرجى تسجيل الدخول');
-      }
-
-      final response = await getWithAuth(
-        '/sessions/chat/$appointmentId',
-        token,
-      );
-
-      if (response.statusCode == 200) {
-        try {
-          final jsonData = jsonDecode(response.body);
-          return ChatSessionInfo.fromJson(jsonData);
-        } catch (e) {
-          print('❌ Error parsing chat session response: $e');
-          throw Exception('خطأ في معالجة استجابة الخادم');
-        }
-      } else if (response.statusCode == 403) {
-        throw Exception('غير مصرح لك بالوصول إلى هذه المحادثة');
-      } else if (response.statusCode == 404) {
-        throw Exception('الموعد غير موجود');
-      } else {
-        try {
-          final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'فشل جلب معلومات المحادثة');
-        } catch (e) {
-          throw Exception('فشل جلب معلومات المحادثة (${response.statusCode})');
-        }
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('خطأ في جلب معلومات المحادثة: ${e.toString()}');
-    }
-  }
-
-  /// Get chat messages
-  Future<MessagesResponse> getChatMessages({
-    required String appointmentId,
-    int page = 1,
-    int limit = 50,
-    String? token,
-  }) async {
-    try {
-      if (token == null || token.isEmpty) {
-        throw Exception('غير مصرح - يرجى تسجيل الدخول');
-      }
-
-      // تحديد حد أقصى للرسائل في الصفحة الواحدة
-      final maxLimit = limit > 100 ? 100 : limit;
-      final pageNum = page < 1 ? 1 : page;
-
-      final response = await getWithAuth(
-        '/sessions/chat/$appointmentId/messages?page=$pageNum&limit=$maxLimit',
-        token,
-      );
-
-      if (response.statusCode == 200) {
-        try {
-          final jsonData = jsonDecode(response.body);
-          return MessagesResponse.fromJson(jsonData);
-        } catch (e) {
-          print('❌ Error parsing chat messages response: $e');
-          throw Exception('خطأ في معالجة استجابة الخادم');
-        }
-      } else if (response.statusCode == 400) {
-        try {
-          final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'انتهت صلاحية جلسة المحادثة');
-        } catch (e) {
-          throw Exception('انتهت صلاحية جلسة المحادثة');
-        }
-      } else if (response.statusCode == 403) {
-        throw Exception('غير مصرح لك بالوصول إلى هذه المحادثة');
-      } else {
-        try {
-          final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'فشل جلب الرسائل');
-        } catch (e) {
-          throw Exception('فشل جلب الرسائل (${response.statusCode})');
-        }
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('خطأ في جلب الرسائل: ${e.toString()}');
-    }
-  }
-
-  /// Send a chat message
-  Future<ChatMessage> sendChatMessage({
-    required String appointmentId,
-    required String content,
-    String? type,
-    String? replyTo,
-    List<ChatAttachment>? attachments,
-    String? token,
-  }) async {
-    try {
-      if (token == null || token.isEmpty) {
-        throw Exception('غير مصرح - يرجى تسجيل الدخول');
-      }
-
-      final request = SendMessageRequest(
-        content: content,
-        type: type,
-        replyTo: replyTo,
-        attachments: attachments,
-      );
-
-      final response = await postWithAuth(
-        '/sessions/chat/$appointmentId/messages',
-        request.toJson(),
-        token,
-      );
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        try {
-          final jsonData = jsonDecode(response.body);
-          return ChatMessage.fromJson(jsonData);
-        } catch (e) {
-          print('❌ Error parsing send message response: $e');
-          throw Exception('خطأ في معالجة استجابة الخادم');
-        }
-      } else if (response.statusCode == 400) {
-        try {
-          final error = jsonDecode(response.body);
-          final message = error['message'] ?? 'لا يمكن إرسال الرسالة الآن';
-          throw Exception(message);
-        } catch (e) {
-          throw Exception('لا يمكن إرسال الرسالة الآن');
-        }
-      } else if (response.statusCode == 403) {
-        throw Exception('غير مصرح لك بإرسال رسائل إلى هذه المحادثة');
-      } else if (response.statusCode == 429) {
-        throw Exception('تم إرسال رسائل كثيرة. يرجى الانتظار قليلاً');
-      } else {
-        try {
-          final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'فشل إرسال الرسالة');
-        } catch (e) {
-          throw Exception('فشل إرسال الرسالة (${response.statusCode})');
-        }
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('خطأ في إرسال الرسالة: ${e.toString()}');
-    }
-  }
-
-  /// Mark chat messages as read
-  Future<void> markChatAsRead({
-    required String appointmentId,
-    String? token,
-  }) async {
-    try {
-      if (token == null || token.isEmpty) {
-        throw Exception('غير مصرح - يرجى تسجيل الدخول');
-      }
-
-      final response = await postWithAuth(
-        '/sessions/chat/$appointmentId/read',
-        {},
-        token,
-      );
-
-      if (response.statusCode != 200) {
-        try {
-          final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'فشل تحديث حالة القراءة');
-        } catch (e) {
-          throw Exception('فشل تحديث حالة القراءة (${response.statusCode})');
-        }
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('خطأ في تحديث حالة القراءة: ${e.toString()}');
-    }
-  }
-
-  /// Get unread messages count
-  Future<int> getChatUnreadCount({
-    required String appointmentId,
-    String? token,
-  }) async {
-    try {
-      if (token == null || token.isEmpty) {
-        throw Exception('غير مصرح - يرجى تسجيل الدخول');
-      }
-
-      final response = await getWithAuth(
-        '/sessions/chat/$appointmentId/unread-count',
-        token,
-      );
-
-      if (response.statusCode == 200) {
-        try {
-          final jsonData = jsonDecode(response.body);
-          return UnreadCountResponse.fromJson(jsonData).unreadCount;
-        } catch (e) {
-          print('❌ Error parsing unread count response: $e');
-          throw Exception('خطأ في معالجة استجابة الخادم');
-        }
-      } else if (response.statusCode == 403) {
-        throw Exception('غير مصرح لك بالوصول إلى هذه المحادثة');
-      } else {
-        try {
-          final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'فشل جلب عدد الرسائل غير المقروءة');
-        } catch (e) {
-          throw Exception('فشل جلب عدد الرسائل غير المقروءة (${response.statusCode})');
-        }
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('خطأ في جلب عدد الرسائل غير المقروءة: ${e.toString()}');
-    }
-  }
-
-  /// Save device token for push notifications
-  /// Note: token parameter should be the auth token from AuthService
-  Future<void> saveDeviceToken(String userId, String deviceToken, String platform, String token) async {
-    try {
-      if (token.isEmpty) {
-        throw Exception('غير مصرح - يرجى تسجيل الدخول');
-      }
-
-      final response = await postWithAuth(
-        '/notifications/token',
-        {
-          'deviceToken': deviceToken,
-          'platform': platform,
-        },
-        token,
-      );
-
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        try {
-          final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'فشل حفظ رمز الجهاز');
-        } catch (e) {
-          throw Exception('فشل حفظ رمز الجهاز (${response.statusCode})');
-        }
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('خطأ في حفظ رمز الجهاز: ${e.toString()}');
-    }
-  }
-
-  /// Delete device token for push notifications
-  /// Note: token parameter should be the auth token from AuthService
-  Future<void> deleteDeviceToken(String userId, String deviceToken, String token) async {
-    try {
-      if (token.isEmpty) {
-        throw Exception('غير مصرح - يرجى تسجيل الدخول');
-      }
-
-      final response = await deleteWithAuth(
-        '/notifications/token',
-        {
-          'deviceToken': deviceToken,
-        },
-        token,
-      );
-
-      if (response.statusCode != 200 && response.statusCode != 204) {
-        try {
-          final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'فشل حذف رمز الجهاز');
-        } catch (e) {
-          throw Exception('فشل حذف رمز الجهاز (${response.statusCode})');
-        }
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('خطأ في حذف رمز الجهاز: ${e.toString()}');
-    }
-  }
-
 }

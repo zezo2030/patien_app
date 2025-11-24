@@ -75,8 +75,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
   }
 
   String _formatTime(DateTime dateTime) {
-    final hour = dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
-    final period = dateTime.hour >= 12 ? 'مساءً' : 'صباحاً';
+    int hour = dateTime.hour;
+    final period = hour >= 12 ? 'مساءً' : 'صباحاً';
+    
+    if (hour == 0) {
+      hour = 12;
+    } else if (hour > 12) {
+      hour = hour - 12;
+    }
+    
     final minute = dateTime.minute.toString().padLeft(2, '0');
     return '$hour:$minute $period';
   }
@@ -87,6 +94,52 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
     final year = dateTime.year;
     final weekday = _getArabicWeekday(dateTime.weekday);
     return '$weekday، $day $month $year';
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'CONFIRMED':
+      case 'PENDING_CONFIRM':
+        return AppColors.success;
+      case 'COMPLETED':
+        return AppColors.info;
+      case 'CANCELLED':
+        return AppColors.error;
+      case 'PENDING':
+        return AppColors.warning;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status.toUpperCase()) {
+      case 'CONFIRMED':
+        return 'مؤكد';
+      case 'PENDING_CONFIRM':
+        return 'في انتظار التأكيد';
+      case 'COMPLETED':
+        return 'مكتمل';
+      case 'CANCELLED':
+        return 'ملغي';
+      case 'PENDING':
+        return 'قيد الانتظار';
+      default:
+        return status;
+    }
+  }
+
+  IconData _getButtonIcon(AppointmentType type) {
+    switch (type) {
+      case AppointmentType.video:
+        return Iconsax.video;
+      case AppointmentType.chat:
+        return Iconsax.message;
+      case AppointmentType.inPerson:
+        return Iconsax.location;
+      default:
+        return Iconsax.info_circle;
+    }
   }
 
   Future<PaginatedAppointments> _fetchAppointments({String? status}) async {
@@ -137,39 +190,82 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.white,
         body: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
               SliverAppBar(
-                expandedHeight: 120,
+                expandedHeight: 180,
                 floating: false,
                 pinned: true,
                 elevation: 0,
                 backgroundColor: AppColors.primary,
                 flexibleSpace: FlexibleSpaceBar(
-                  title: const Text(
+                  title: Text(
                     'مواعيدي',
-                    style: TextStyle(
-                      fontSize: 20,
+                    style: AppTextStyles.headline3.copyWith(
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
+                  centerTitle: true,
                   background: Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topRight,
                         end: Alignment.bottomLeft,
-                        colors: AppColors.gradientPrimary,
+                        colors: AppColors.gradientMedical,
                       ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Decorative circles
+                        Positioned(
+                          top: 20,
+                          left: -30,
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.1),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: -20,
+                          right: -20,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.08),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
                 bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(48),
+                  preferredSize: const Size.fromHeight(60),
                   child: Container(
-                    color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
+                    ),
                     child: TabBar(
                       controller: _tabController,
                       onTap: (index) {
@@ -181,25 +277,25 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                       unselectedLabelColor: AppColors.textSecondary,
                       indicatorColor: AppColors.primary,
                       indicatorWeight: 3,
-                      labelStyle: const TextStyle(
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelStyle: AppTextStyles.bodyLarge.copyWith(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
-                      unselectedLabelStyle: const TextStyle(
+                      unselectedLabelStyle: AppTextStyles.bodyMedium.copyWith(
                         fontSize: 14,
-                        fontWeight: FontWeight.normal,
                       ),
                       tabs: const [
                         Tab(
-                          icon: Icon(Iconsax.calendar_tick, size: 20),
+                          icon: Icon(Iconsax.calendar_tick, size: 22),
                           text: 'القادمة',
                         ),
                         Tab(
-                          icon: Icon(Iconsax.calendar_1, size: 20),
+                          icon: Icon(Iconsax.calendar_1, size: 22),
                           text: 'السابقة',
                         ),
                         Tab(
-                          icon: Icon(Iconsax.calendar_remove, size: 20),
+                          icon: Icon(Iconsax.calendar_remove, size: 22),
                           text: 'الملغاة',
                         ),
                       ],
@@ -227,48 +323,113 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
       future: _appointmentsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting || _isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withOpacity(0.1),
+                        AppColors.primary.withOpacity(0.05),
+                      ],
+                    ),
+                  ),
+                  child: const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    strokeWidth: 3,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'جاري تحميل المواعيد...',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
           );
         }
 
         if (snapshot.hasError) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Iconsax.info_circle,
-                  size: 64,
-                  color: AppColors.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'حدث خطأ في تحميل المواعيد',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.error,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.error.withOpacity(0.15),
+                          AppColors.error.withOpacity(0.05),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.error.withOpacity(0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Iconsax.info_circle,
+                      size: 64,
+                      color: AppColors.error,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  snapshot.error.toString().replaceAll('Exception: ', ''),
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                  const SizedBox(height: 32),
+                  Text(
+                    'حدث خطأ في تحميل المواعيد',
+                    style: AppTextStyles.headline3.copyWith(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    if (mounted) {
-                      setState(() {
-                        _appointmentsFuture = _fetchAppointments();
-                      });
-                    }
-                  },
-                  child: const Text('إعادة المحاولة'),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Text(
+                    snapshot.error.toString().replaceAll('Exception: ', ''),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 15,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (mounted) {
+                        setState(() {
+                          _appointmentsFuture = _fetchAppointments();
+                        });
+                      }
+                    },
+                    icon: const Icon(Iconsax.refresh, size: 20),
+                    label: const Text('إعادة المحاولة'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
+                      ),
+                      backgroundColor: AppColors.error,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 4,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -314,23 +475,28 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
   Widget _buildEmptyState(String message) {
     IconData icon;
     String subtitle;
+    Color iconColor;
     
     switch (_currentTabIndex) {
       case 0:
         icon = Iconsax.calendar_tick;
         subtitle = 'عندما تحجز موعداً جديداً، سيظهر هنا';
+        iconColor = AppColors.success;
         break;
       case 1:
         icon = Iconsax.calendar_1;
         subtitle = 'سجل المواعيد السابقة سيظهر هنا';
+        iconColor = AppColors.info;
         break;
       case 2:
         icon = Iconsax.calendar_remove;
         subtitle = 'لم يتم إلغاء أي موعد حتى الآن';
+        iconColor = AppColors.textSecondary;
         break;
       default:
         icon = Iconsax.calendar;
         subtitle = '';
+        iconColor = AppColors.primary;
     }
 
     return Center(
@@ -339,23 +505,47 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withOpacity(0.1),
-              ),
-              child: Icon(
-                icon,
-                size: 80,
-                color: AppColors.primary.withOpacity(0.5),
-              ),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutBack,
+              builder: (context, value, child) {
+                final clampedValue = value.clamp(0.0, 1.0);
+                return Transform.scale(
+                  scale: clampedValue,
+                  child: Container(
+                    padding: const EdgeInsets.all(40),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          iconColor.withOpacity(0.15),
+                          iconColor.withOpacity(0.05),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: iconColor.withOpacity(0.2),
+                          blurRadius: 25,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 80,
+                      color: iconColor,
+                    ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             Text(
               message,
               style: AppTextStyles.headline3.copyWith(
                 color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
@@ -364,6 +554,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
               subtitle,
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textSecondary,
+                fontSize: 15,
               ),
               textAlign: TextAlign.center,
             ),
@@ -374,422 +565,323 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
   }
 
   Widget _buildAppointmentCard(Appointment appointment) {
-    final status = appointment.status;
-    Color statusColor = AppColors.info;
-    String statusText = 'مؤكد';
-    IconData statusIcon = Iconsax.tick_circle;
-    
-    if (status == 'PENDING' || status == 'PENDING_CONFIRM') {
-      statusColor = AppColors.warning;
-      statusText = 'قيد الانتظار';
-      statusIcon = Iconsax.clock;
-    } else if (status == 'CANCELLED') {
-      statusColor = AppColors.error;
-      statusText = 'ملغى';
-      statusIcon = Iconsax.close_circle;
-    } else if (status == 'COMPLETED') {
-      statusColor = AppColors.success;
-      statusText = 'مكتمل';
-      statusIcon = Iconsax.tick_circle;
-    } else if (status == 'CONFIRMED') {
-      statusColor = AppColors.info;
-      statusText = 'مؤكد';
-      statusIcon = Iconsax.verify;
-    }
-
     // Format date
     final day = appointment.startAt.day;
     final month = _getArabicMonth(appointment.startAt.month);
     final year = appointment.startAt.year;
     final weekday = _getArabicWeekday(appointment.startAt.weekday);
-    final time = _formatTime(appointment.startAt);
+    
+    // Format time range
+    final startTime = _formatTime(appointment.startAt);
+    final endTime = _formatTime(appointment.endAt);
+    final timeRange = '$startTime - $endTime';
     
     // Get doctor name
     final knownDoctorName = appointment.doctor?.name;
     
-    // Get service/department name
-    final serviceName = appointment.service?.name ?? 'خدمة غير محددة';
-
-    // Calculate time until appointment
-    final now = DateTime.now();
-    final difference = appointment.startAt.difference(now);
-    String timeUntil = '';
+    // Get appointment type
+    final appointmentType = AppointmentType.fromString(appointment.type);
     
-    if (difference.isNegative && status != 'COMPLETED' && status != 'CANCELLED') {
-      timeUntil = 'منتهي';
-    } else if (status == 'CONFIRMED' || status == 'PENDING' || status == 'PENDING_CONFIRM') {
-      if (difference.inDays > 0) {
-        timeUntil = 'بعد ${difference.inDays} يوم';
-      } else if (difference.inHours > 0) {
-        timeUntil = 'بعد ${difference.inHours} ساعة';
-      } else if (difference.inMinutes > 0) {
-        timeUntil = 'بعد ${difference.inMinutes} دقيقة';
-      } else {
-        timeUntil = 'الآن';
-      }
+    // Get button text based on appointment type
+    String buttonText;
+    VoidCallback? onButtonPressed;
+    
+    switch (appointmentType) {
+      case AppointmentType.video:
+        buttonText = 'انضم إلى جلسة الفيديو';
+        onButtonPressed = () {
+          // TODO: Navigate to video call screen
+          _showAppointmentDetails(appointment);
+        };
+        break;
+      case AppointmentType.chat:
+        buttonText = 'أرسل رسالة';
+        onButtonPressed = () {
+          // TODO: Navigate to chat screen
+          _showAppointmentDetails(appointment);
+        };
+        break;
+      case AppointmentType.inPerson:
+        buttonText = 'حضوري';
+        onButtonPressed = () {
+          _showAppointmentDetails(appointment);
+        };
+        break;
+      default:
+        buttonText = 'عرض التفاصيل';
+        onButtonPressed = () {
+          _showAppointmentDetails(appointment);
+        };
     }
 
-    final canCancel = (status == 'CONFIRMED' || status == 'PENDING' || status == 'PENDING_CONFIRM') && 
-                      difference.inHours > 2;
-
-    return Card(
+    final statusColor = _getStatusColor(appointment.status);
+    
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shadowColor: statusColor.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () {
-          _showAppointmentDetails(appointment);
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          children: [
-            // Header with gradient
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [
-                    statusColor.withOpacity(0.1),
-                    statusColor.withOpacity(0.05),
-                  ],
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  // Doctor Avatar
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: AppColors.gradientPrimary,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            _showAppointmentDetails(appointment);
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Profile Picture - Modern circular design
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: AppColors.gradientPrimary,
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        (knownDoctorName != null && knownDoctorName.isNotEmpty)
-                            ? knownDoctorName[0].toUpperCase()
-                            : 'د',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Doctor Info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (knownDoctorName != null && knownDoctorName.isNotEmpty)
-                          Text(
-                            'د. $knownDoctorName',
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                            ),
-                          )
-                        else
-                          FutureBuilder<String?>(
-                            future: _getDoctorName(appointment.doctorId),
-                            builder: (context, snapshot) {
-                              final name = snapshot.data;
-                              return Text(
-                                'د. ${name != null && name.isNotEmpty ? name : 'طبيب غير محدد'}',
-                                style: AppTextStyles.bodyLarge.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17,
-                                ),
-                              );
-                            },
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
                           ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Iconsax.health,
-                              size: 14,
-                              color: AppColors.textSecondary,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                serviceName,
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Status Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: statusColor.withOpacity(0.4),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          statusIcon,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          statusText,
-                          style: AppTextStyles.bodySmall.copyWith(
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          (knownDoctorName != null && knownDoctorName.isNotEmpty)
+                              ? knownDoctorName[0].toUpperCase()
+                              : 'د',
+                          style: AppTextStyles.headline2.copyWith(
+                            fontSize: 32,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Body
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Date and Time
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        // Date Section
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Iconsax.calendar_1,
-                                  color: AppColors.primary,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    weekday,
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  Text(
-                                    '$day $month $year',
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Time Section
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Iconsax.clock,
-                                  color: AppColors.accent,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'الوقت',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  Text(
-                                    time,
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Time Until / Price Section
-                  if (timeUntil.isNotEmpty || appointment.price != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (timeUntil.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.info.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Iconsax.timer_1,
-                                    size: 16,
-                                    color: AppColors.info,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    timeUntil,
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.info,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (appointment.price != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.success.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Iconsax.money,
-                                    size: 16,
-                                    color: AppColors.success,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${appointment.price} ريال',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.success,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
                       ),
                     ),
-                  
-                  // Action Buttons
-                  if (canCancel)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Row(
+                    const SizedBox(width: 16),
+                    // Doctor Info and Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _cancelAppointment(appointment),
-                              icon: const Icon(Iconsax.close_square, size: 18),
-                              label: const Text('إلغاء الموعد'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.error,
-                                side: const BorderSide(color: AppColors.error),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                          // Doctor Name with status badge
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (knownDoctorName != null && knownDoctorName.isNotEmpty)
+                                      RichText(
+                                        text: TextSpan(
+                                          style: AppTextStyles.bodyLarge.copyWith(
+                                            fontSize: 17,
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          children: [
+                                            TextSpan(
+                                              text: 'د. $knownDoctorName',
+                                              style: AppTextStyles.bodyLarge.copyWith(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 17,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else
+                                      FutureBuilder<String?>(
+                                        future: _getDoctorName(appointment.doctorId),
+                                        builder: (context, snapshot) {
+                                          final name = snapshot.data;
+                                          return RichText(
+                                            text: TextSpan(
+                                              style: AppTextStyles.bodyLarge.copyWith(
+                                                fontSize: 17,
+                                                color: AppColors.textPrimary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              children: [
+                                                TextSpan(
+                                                  text: 'د. ${name != null && name.isNotEmpty ? name : 'طبيب غير محدد'}',
+                                                  style: AppTextStyles.bodyLarge.copyWith(
+                                                    color: AppColors.primary,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 17,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    const SizedBox(height: 4),
+                                    // Status badge
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: statusColor.withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _getStatusText(appointment.status),
+                                        style: AppTextStyles.caption.copyWith(
+                                          fontSize: 11,
+                                          color: statusColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // Date and Time in modern cards
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.border.withOpacity(0.5),
+                                width: 1,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _rescheduleAppointment(appointment),
-                              icon: const Icon(Iconsax.refresh, size: 18),
-                              label: const Text('إعادة جدولة'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                            child: Column(
+                              children: [
+                                // Date
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Iconsax.calendar_1,
+                                        size: 16,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        '$weekday، $day $month $year',
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          fontSize: 14,
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
+                                const SizedBox(height: 10),
+                                // Time
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.accent.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Iconsax.clock,
+                                        size: 16,
+                                        color: AppColors.accent,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        timeRange,
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          fontSize: 14,
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Action Button - Modern gradient design
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onButtonPressed,
+                    icon: Icon(
+                      _getButtonIcon(appointmentType ?? AppointmentType.inPerson),
+                      size: 20,
+                    ),
+                    label: Text(
+                      buttonText,
+                      style: AppTextStyles.button.copyWith(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      shadowColor: AppColors.primary.withOpacity(0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

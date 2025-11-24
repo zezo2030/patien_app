@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../../config/colors.dart';
 import '../../config/text_styles.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
+import '../../models/user.dart';
+import '../medical_records/medical_records_screen.dart';
+import '../appointments/appointments_screen.dart';
+import 'profile_edit_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,9 +21,9 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   final _apiService = ApiService();
-  late Future _userFuture = _authService.getCurrentUser();
+  late Future<User?> _userFuture;
   bool _isRefreshing = false;
-  
+
   // Statistics
   int _appointmentsCount = 0;
   int _medicalRecordsCount = 0;
@@ -28,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _userFuture = _authService.getCurrentUser();
     _loadStatistics();
   }
 
@@ -49,13 +55,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final results = await Future.wait([
         _apiService.getPatientAppointments(token: token, limit: 1),
         _apiService.getPatientMedicalRecords(token: token, limit: 1),
-        _apiService.getPatientAppointments(token: token, status: 'COMPLETED', limit: 1),
+        _apiService.getPatientAppointments(
+          token: token,
+          status: 'COMPLETED',
+          limit: 1,
+        ),
       ]);
 
       setState(() {
         _appointmentsCount = (results[0] as PaginatedAppointments).total;
         _medicalRecordsCount = (results[1] as PaginatedMedicalRecords).total;
-        _completedAppointmentsCount = (results[2] as PaginatedAppointments).total;
+        _completedAppointmentsCount =
+            (results[2] as PaginatedAppointments).total;
         _isLoadingStats = false;
       });
     } catch (e) {
@@ -126,33 +137,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: const Text('الملف الشخصي'),
-          elevation: 0,
-          actions: [
-            IconButton(
-              icon: _isRefreshing
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.refresh),
-              onPressed: _isRefreshing ? null : _refreshProfile,
-              tooltip: 'تحديث البيانات',
-            ),
-          ],
-        ),
         body: RefreshIndicator(
           onRefresh: _refreshProfile,
-          child: FutureBuilder(
+          color: AppColors.primary,
+          child: FutureBuilder<User?>(
             future: _userFuture,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting && !_isRefreshing) {
-                return const Center(child: CircularProgressIndicator());
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !_isRefreshing) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary.withOpacity(0.1),
+                              AppColors.primary.withOpacity(0.05),
+                            ],
+                          ),
+                        ),
+                        child: const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
+                          strokeWidth: 3,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'جاري تحميل البيانات...',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               if (snapshot.hasError) {
@@ -163,49 +188,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (error.toString().contains('انتهت صلاحية') ||
                     error.toString().contains('401') ||
                     error.toString().contains('غير مصرح')) {
-                  errorMessage = 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى';
+                  errorMessage =
+                      'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى';
                   shouldNavigateToLogin = true;
                 } else if (error.toString().contains('لا يمكن الاتصال')) {
-                  errorMessage = 'لا يمكن الاتصال بالخادم. تحقق من اتصالك بالإنترنت';
+                  errorMessage =
+                      'لا يمكن الاتصال بالخادم. تحقق من اتصالك بالإنترنت';
                 } else {
                   errorMessage = error.toString().replaceAll('Exception: ', '');
                 }
 
                 return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: AppColors.error,
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Text(
-                          errorMessage,
-                          style: AppTextStyles.bodyLarge.copyWith(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.error.withOpacity(0.15),
+                                AppColors.error.withOpacity(0.05),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.error.withOpacity(0.2),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Iconsax.info_circle,
+                            size: 64,
                             color: AppColors.error,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Text(
+                          errorMessage,
+                          style: AppTextStyles.headline3.copyWith(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: shouldNavigateToLogin
-                            ? () {
-                                Navigator.of(context).pushReplacementNamed('/login');
-                              }
-                            : () {
-                                setState(() {
-                                  _userFuture = _authService.getCurrentUser();
-                                });
-                              },
-                        icon: Icon(shouldNavigateToLogin ? Icons.login : Icons.refresh),
-                        label: Text(shouldNavigateToLogin ? 'تسجيل الدخول' : 'إعادة المحاولة'),
-                      ),
-                    ],
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: shouldNavigateToLogin
+                              ? () {
+                                  Navigator.of(
+                                    context,
+                                  ).pushReplacementNamed('/login');
+                                }
+                              : () {
+                                  setState(() {
+                                    _userFuture = _authService.getCurrentUser();
+                                  });
+                                },
+                          icon: Icon(
+                            shouldNavigateToLogin
+                                ? Iconsax.login
+                                : Iconsax.refresh,
+                            size: 20,
+                          ),
+                          label: Text(
+                            shouldNavigateToLogin
+                                ? 'تسجيل الدخول'
+                                : 'إعادة المحاولة',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            backgroundColor: AppColors.error,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 4,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
@@ -244,11 +314,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(
+                  top: 20,
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                ),
                 child: Column(
                   children: [
+                    // زر التحديث في الأعلى
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'الملف الشخصي',
+                          style: AppTextStyles.titleLarge.copyWith(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: _isRefreshing
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.primary,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Iconsax.refresh,
+                                  color: AppColors.primary,
+                                  size: 24,
+                                ),
+                          onPressed: _isRefreshing ? null : _refreshProfile,
+                          tooltip: 'تحديث البيانات',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
                     _buildProfileHeader(user),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     _buildStatistics(),
                     const SizedBox(height: 24),
                     _buildMenuSection(context),
@@ -262,53 +371,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileHeader(user) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+  Widget _buildProfileHeader(User user) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Icon(
-                Icons.person,
-                size: 48,
-                color: AppColors.primary,
+            // Avatar with gradient border
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: AppColors.gradientPrimary),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 56,
+                backgroundColor: Colors.white,
+                backgroundImage: user.avatar != null && user.avatar!.isNotEmpty
+                    ? NetworkImage(user.avatar!)
+                    : null,
+                child: user.avatar == null || user.avatar!.isEmpty
+                    ? Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: AppColors.gradientPrimary,
+                          ),
+                        ),
+                        child: Icon(
+                          Iconsax.user,
+                          size: 56,
+                          color: Colors.white,
+                        ),
+                      )
+                    : null,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               user.name,
-              style: AppTextStyles.headline2,
+              style: AppTextStyles.headline2.copyWith(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
-            Text(
-              user.email,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 4,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                user.role,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.success,
-                  fontWeight: FontWeight.bold,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Iconsax.sms, size: 16, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
+                Text(
+                  user.email,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 15,
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.success.withOpacity(0.15),
+                    AppColors.success.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.success.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Iconsax.verify, size: 16, color: AppColors.success),
+                  const SizedBox(width: 6),
+                  Text(
+                    user.role,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -323,7 +500,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Expanded(child: _buildStatCard('المواعيد', '...', Icons.event)),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatCard('السجلات', '...', Icons.medical_services)),
+          Expanded(
+            child: _buildStatCard('السجلات', '...', Icons.medical_services),
+          ),
           const SizedBox(width: 12),
           Expanded(child: _buildStatCard('الجلسات', '...', Icons.video_call)),
         ],
@@ -332,75 +511,213 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Row(
       children: [
-        Expanded(child: _buildStatCard('المواعيد', _appointmentsCount.toString(), Icons.event)),
+        Expanded(
+          child: _buildStatCard(
+            'المواعيد',
+            _appointmentsCount.toString(),
+            Icons.event,
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('السجلات', _medicalRecordsCount.toString(), Icons.medical_services)),
+        Expanded(
+          child: _buildStatCard(
+            'السجلات',
+            _medicalRecordsCount.toString(),
+            Icons.medical_services,
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('الجلسات', _completedAppointmentsCount.toString(), Icons.video_call)),
+        Expanded(
+          child: _buildStatCard(
+            'الجلسات',
+            _completedAppointmentsCount.toString(),
+            Icons.video_call,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildStatCard(String title, String value, IconData icon) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+    Color cardColor;
+    Color iconColor;
+    bool isClickable = false;
+
+    // تحديد الألوان حسب نوع البطاقة
+    switch (title) {
+      case 'المواعيد':
+        cardColor = AppColors.primary;
+        iconColor = AppColors.primary;
+        isClickable = true;
+        break;
+      case 'السجلات':
+        cardColor = AppColors.info;
+        iconColor = AppColors.info;
+        isClickable = true;
+        break;
+      case 'الجلسات':
+        cardColor = AppColors.success;
+        iconColor = AppColors.success;
+        break;
+      default:
+        cardColor = AppColors.primary;
+        iconColor = AppColors.primary;
+    }
+
+    Widget cardContent = Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: cardColor.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Icon(icon, color: AppColors.primary, size: 24),
-            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+            const SizedBox(height: 12),
             Text(
               value,
               style: AppTextStyles.headline2.copyWith(
-                fontSize: 24,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
             ),
-            Text(
-              title,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (isClickable) ...[
+                  const SizedBox(width: 6),
+                  Icon(
+                    Iconsax.arrow_left_2,
+                    size: 14,
+                    color: iconColor.withOpacity(0.7),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
       ),
     );
+
+    // إذا كانت البطاقة قابلة للنقر، نضيف InkWell
+    if (isClickable) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (title == 'السجلات') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MedicalRecordsScreen(),
+                ),
+              );
+            } else if (title == 'المواعيد') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AppointmentsScreen(),
+                ),
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: cardContent,
+        ),
+      );
+    }
+
+    return cardContent;
   }
 
   Widget _buildMenuSection(BuildContext context) {
     final menuItems = [
       {
-        'icon': Icons.person_outline,
+        'icon': Iconsax.profile_circle,
         'title': 'تعديل الملف الشخصي',
-        'onTap': () => _showComingSoon(context),
+        'color': AppColors.primary,
+        'onTap': () async {
+          // Resolve user before navigation
+          final user = await _userFuture;
+          if (user != null && context.mounted) {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfileEditScreen(user: user),
+              ),
+            );
+
+            if (result == true) {
+              _refreshProfile();
+            }
+          }
+        },
       },
       {
-        'icon': Icons.medical_services_outlined,
+        'icon': Iconsax.health,
         'title': 'السجلات الطبية',
-        'onTap': () => _showComingSoon(context),
+        'color': AppColors.info,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MedicalRecordsScreen(),
+            ),
+          );
+        },
       },
       {
-        'icon': Icons.payment_outlined,
+        'icon': Iconsax.wallet,
         'title': 'المدفوعات',
+        'color': AppColors.success,
         'onTap': () => _showComingSoon(context),
       },
       {
-        'icon': Icons.settings_outlined,
+        'icon': Iconsax.setting_2,
         'title': 'الإعدادات',
+        'color': AppColors.textSecondary,
         'onTap': () => _showComingSoon(context),
       },
       {
-        'icon': Icons.help_outline,
-        'title': 'المساعدة',
+        'icon': Iconsax.message_question,
+        'title': 'المساعدة والدعم',
+        'color': AppColors.accent,
         'onTap': () => _showComingSoon(context),
       },
       {
-        'icon': Icons.logout,
+        'icon': Iconsax.logout,
         'title': 'تسجيل الخروج',
         'color': AppColors.error,
         'onTap': () async {
@@ -414,27 +731,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Column(
       children: menuItems.map((item) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: AppColors.border),
+        final itemColor = item['color'] as Color;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+                spreadRadius: 0,
+              ),
+            ],
           ),
-          child: ListTile(
-            leading: Icon(
-              item['icon'] as IconData,
-              color: item.containsKey('color') ? item['color'] as Color : AppColors.primary,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: item['onTap'] as VoidCallback,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: itemColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        item['icon'] as IconData,
+                        color: itemColor,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        item['title'] as String,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Iconsax.arrow_left_2,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            title: Text(
-              item['title'] as String,
-              style: AppTextStyles.bodyLarge,
-            ),
-            trailing: Icon(
-              Icons.chevron_left,
-              color: AppColors.textSecondary,
-            ),
-            onTap: item['onTap'] as VoidCallback,
           ),
         );
       }).toList(),
@@ -447,4 +802,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-

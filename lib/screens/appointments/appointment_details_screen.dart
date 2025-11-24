@@ -9,17 +9,16 @@ import '../../models/appointment.dart';
 import '../../models/doctor.dart';
 import '../video_call/video_call_screen.dart';
 import '../chat/chat_screen.dart';
+import '../doctor/create_medical_record_screen.dart';
 
 class AppointmentDetailsScreen extends StatefulWidget {
   final Appointment appointment;
 
-  const AppointmentDetailsScreen({
-    super.key,
-    required this.appointment,
-  });
+  const AppointmentDetailsScreen({super.key, required this.appointment});
 
   @override
-  State<AppointmentDetailsScreen> createState() => _AppointmentDetailsScreenState();
+  State<AppointmentDetailsScreen> createState() =>
+      _AppointmentDetailsScreenState();
 }
 
 class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
@@ -36,7 +35,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
 
   Future<void> _ensureDoctorLoaded() async {
     // إذا لم تأتِ بيانات الطبيب ضمن الموعد، اجلبها من السيرفر
-    if (widget.appointment.doctor == null && widget.appointment.doctorId.isNotEmpty) {
+    if (widget.appointment.doctor == null &&
+        widget.appointment.doctorId.isNotEmpty) {
       try {
         final token = await _authService.getToken();
         if (token == null) return;
@@ -57,15 +57,31 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
 
   String _getArabicMonth(int month) {
     const months = [
-      'يناير', 'فبراير', 'مارس', 'إبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      'يناير',
+      'فبراير',
+      'مارس',
+      'إبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     return months[month - 1];
   }
 
   String _getArabicWeekday(int weekday) {
     const weekdays = [
-      'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'
+      'الإثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+      'الأحد',
     ];
     return weekdays[weekday - 1];
   }
@@ -140,7 +156,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
 
   bool _canCancel() {
     final status = widget.appointment.status;
-    if (status != 'PENDING_CONFIRM' && 
+    if (status != 'PENDING_CONFIRM' &&
         status != 'CONFIRMED' &&
         status != 'PENDING') {
       return false;
@@ -153,7 +169,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
 
   bool _canReschedule() {
     final status = widget.appointment.status;
-    if (status != 'PENDING_CONFIRM' && 
+    if (status != 'PENDING_CONFIRM' &&
         status != 'CONFIRMED' &&
         status != 'PENDING') {
       return false;
@@ -162,6 +178,72 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
     final now = DateTime.now();
     final hoursUntil = widget.appointment.startAt.difference(now).inHours;
     return hoursUntil > 24;
+  }
+
+  Future<bool> _canCreateMedicalRecord() async {
+    // يجب أن يكون المستخدم طبيباً
+    final user = await _authService.getCurrentUser();
+    if (user?.role != 'DOCTOR') {
+      return false;
+    }
+
+    // يجب أن يكون الموعد مكتملاً
+    return widget.appointment.status == 'COMPLETED';
+  }
+
+  Future<void> _createMedicalRecord() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      if (user?.role != 'DOCTOR') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('غير مصرح - يجب أن تكون طبيباً'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      if (widget.appointment.status != 'COMPLETED') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('يمكن إنشاء السجل الطبي فقط للمواعيد المكتملة'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // الانتقال إلى صفحة إنشاء السجل الطبي
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              CreateMedicalRecordScreen(appointment: widget.appointment),
+        ),
+      );
+
+      // إذا تم إنشاء السجل بنجاح، تحديث الصفحة
+      if (result == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إنشاء السجل الطبي بنجاح'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   bool _canStartVideoCall() {
@@ -194,7 +276,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
     // في الوضع العادي: التحقق من الدفع إذا كان مطلوباً
     if (widget.appointment.requiresPayment == true) {
       // التحقق من حالة الدفع
-      if (widget.appointment.paymentStatus != 'PAID' && 
+      if (widget.appointment.paymentStatus != 'PAID' &&
           widget.appointment.paymentStatus != 'COMPLETED') {
         return false;
       }
@@ -285,7 +367,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
     // في الوضع العادي: التحقق من الدفع إذا كان مطلوباً
     if (widget.appointment.requiresPayment == true) {
       // التحقق من حالة الدفع
-      if (widget.appointment.paymentStatus != 'PAID' && 
+      if (widget.appointment.paymentStatus != 'PAID' &&
           widget.appointment.paymentStatus != 'COMPLETED') {
         return false;
       }
@@ -356,7 +438,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
     }
 
     final reasonController = TextEditingController();
-    
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => Directionality(
@@ -386,9 +468,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
               child: const Text('تأكيد الإلغاء'),
             ),
           ],
@@ -403,8 +483,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
         final token = await _authService.getToken();
         await _apiService.cancelAppointment(
           appointmentId: widget.appointment.id,
-          reason: reasonController.text.isNotEmpty 
-              ? reasonController.text 
+          reason: reasonController.text.isNotEmpty
+              ? reasonController.text
               : null,
           token: token,
         );
@@ -426,7 +506,9 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('خطأ: ${e.toString().replaceAll('Exception: ', '')}'),
+              content: Text(
+                'خطأ: ${e.toString().replaceAll('Exception: ', '')}',
+              ),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 5),
@@ -530,7 +612,9 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('خطأ: ${e.toString().replaceAll('Exception: ', '')}'),
+              content: Text(
+                'خطأ: ${e.toString().replaceAll('Exception: ', '')}',
+              ),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 5),
@@ -545,7 +629,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   Widget build(BuildContext context) {
     final appointment = widget.appointment;
     final statusColor = _getStatusColor(appointment.status);
-    final doctorName = appointment.doctor?.name ?? _doctor?.name ?? 'طبيب غير محدد';
+    final doctorName =
+        appointment.doctor?.name ?? _doctor?.name ?? 'طبيب غير محدد';
     final serviceName = appointment.service?.name ?? 'خدمة غير محددة';
 
     return Directionality(
@@ -648,10 +733,11 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      doctorName.isNotEmpty ? doctorName[0].toUpperCase() : 'د',
-                                      style: const TextStyle(
+                                      doctorName.isNotEmpty
+                                          ? doctorName[0].toUpperCase()
+                                          : 'د',
+                                      style: AppTextStyles.headline2.copyWith(
                                         fontSize: 24,
-                                        fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
                                     ),
@@ -660,7 +746,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'الطبيب',
@@ -691,7 +778,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'الخدمة / التخصص',
@@ -702,9 +790,10 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         serviceName,
-                                        style: AppTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -738,7 +827,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'التاريخ',
@@ -749,9 +839,10 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         _formatDate(appointment.startAt),
-                                        style: AppTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -769,7 +860,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'الوقت',
@@ -780,9 +872,10 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         '${_formatTime(appointment.startAt)} - ${_formatTime(appointment.endAt)}',
-                                        style: AppTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -809,8 +902,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                               appointment.type == 'VIDEO'
                                   ? Iconsax.video
                                   : appointment.type == 'CHAT'
-                                      ? Iconsax.message
-                                      : Iconsax.location,
+                                  ? Iconsax.message
+                                  : Iconsax.location,
                               color: AppColors.secondary,
                               size: 24,
                             ),
@@ -910,7 +1003,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                     ],
 
                     // Cancellation Info
-                    if (appointment.status == 'CANCELLED' && appointment.cancellationReason != null) ...[
+                    if (appointment.status == 'CANCELLED' &&
+                        appointment.cancellationReason != null) ...[
                       const SizedBox(height: 16),
                       Card(
                         elevation: 2,
@@ -961,7 +1055,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                     ],
 
                     // Notes
-                    if (appointment.notes != null && appointment.notes!.isNotEmpty) ...[
+                    if (appointment.notes != null &&
+                        appointment.notes!.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       Card(
                         elevation: 2,
@@ -1008,12 +1103,9 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                         child: ElevatedButton.icon(
                           onPressed: _isLoading ? null : _startVideoCall,
                           icon: const Icon(Iconsax.video, size: 24),
-                          label: const Text(
+                          label: Text(
                             'بدء مكالمة الفيديو',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: AppTextStyles.button.copyWith(fontSize: 16),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.success,
@@ -1036,12 +1128,9 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                         child: ElevatedButton.icon(
                           onPressed: _isLoading ? null : _startChat,
                           icon: const Icon(Iconsax.message, size: 24),
-                          label: const Text(
+                          label: Text(
                             'بدء المحادثة',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: AppTextStyles.button.copyWith(fontSize: 16),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.accent,
@@ -1055,6 +1144,47 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                         ),
                       ),
                     ],
+
+                    // Create Medical Record Button (for doctors only, on completed appointments)
+                    FutureBuilder<bool>(
+                      future: _canCreateMedicalRecord(),
+                      builder: (context, snapshot) {
+                        if (snapshot.data == true) {
+                          return Column(
+                            children: [
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : _createMedicalRecord,
+                                  icon: const Icon(Iconsax.health, size: 24),
+                                  label: Text(
+                                    'إنشاء سجل طبي',
+                                    style: AppTextStyles.button.copyWith(
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.info,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 18,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
 
                     // Action Buttons
                     if (_canCancel() || _canReschedule()) ...[
@@ -1082,7 +1212,9 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: _isLoading ? null : _rescheduleAppointment,
+                            onPressed: _isLoading
+                                ? null
+                                : _rescheduleAppointment,
                             icon: const Icon(Iconsax.refresh, size: 20),
                             label: const Text('إعادة جدولة'),
                             style: ElevatedButton.styleFrom(
@@ -1104,4 +1236,3 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
     );
   }
 }
-
